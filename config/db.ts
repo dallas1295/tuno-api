@@ -51,12 +51,11 @@ export interface DbConfig {
 }
 
 export const dbConfig: DbConfig = {
-  uri:
-    `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@localhost:27017/?authSource=admin`,
+  uri: `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@localhost:27017/?authSource=admin`,
   maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE as string),
   minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE as string),
-  maxIdleTimeMS: parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) *
-    1000,
+  maxIdleTimeMS:
+    parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) * 1000,
   dbName: process.env.MONGO_DB as string,
 };
 
