@@ -38,7 +38,7 @@ export interface DbConfig {
    * in the connection pool before being closed. Reducing this value can help reclaim
    * resources if connections are not being actively used.
    *
-   * @env MONGO_MAX_IDLE_TIME_MS
+   * @env MONGO_MAX_CONN_IDLE_TIME_MS
    */
 
   maxIdleTimeMS: number;
@@ -51,10 +51,12 @@ export interface DbConfig {
 }
 
 export const dbConfig: DbConfig = {
-  uri: process.env.MONGO_URI as string,
+  uri:
+    `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@localhost:27017/?authSource=admin`,
   maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE as string),
   minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE as string),
-  maxIdleTimeMS: parseInt(process.env.MONGO_MAX_IDLE_TIME_MS as string),
+  maxIdleTimeMS: parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) *
+    1000,
   dbName: process.env.MONGO_DB as string,
 };
 
