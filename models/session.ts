@@ -10,7 +10,7 @@ export interface Session {
   /**
    * A unique identifier for the session.  This should be a randomly generated UUID.
    */
-  sesssionId: string;
+  sessionId: string;
 
   /**
    * The ID of the user associated with this session.
@@ -60,7 +60,7 @@ export interface Session {
   /**
    * A boolean value indicating whether the session is currently active.
    */
-  active: boolean;
+  isActive: boolean;
 }
 
 /**
