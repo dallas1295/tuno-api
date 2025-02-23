@@ -231,7 +231,7 @@ export class UserRepository {
    * @returns A Promise that resolves to the number of documents deleted (0 or 1).
    * @throws If the user ID is missing, or if there's a database error.
    */
-  async deleteUserById(userId: string): Promise<number> {
+  async deleteUserById(userId: string): Promise<void> {
     const timer = trackDbOperation("delete", "users");
     if (!userId) {
       ErrorCounter.inc({
@@ -245,7 +245,12 @@ export class UserRepository {
     try {
       const result = await this.collection.deleteOne({ userId });
 
-      return result.deletedCount;
+      if (result.deletedCount === 0) {
+        ErrorCounter.inc({
+          type: "database",
+          operation: "delete_user_failed",
+        });
+      }
     } catch (error) {
       ErrorCounter.inc({
         type: "database",
