@@ -7,7 +7,7 @@
  * Represents the possible priority levels for a to-do item.
  */
 export enum PriorityLevel {
-  /**
+  /**H
    * Low priority.
    */
   Low = "low",
@@ -85,8 +85,7 @@ export interface Todo {
   /**
    * The date and time when the to-do item was last updated.
    */
-  updatedAt: string; // Consider using Date if dealing with actual Date objects
-
+  updatedAt: Date;
   /**
    * An optional array of tags associated with the to-do item.
    */
