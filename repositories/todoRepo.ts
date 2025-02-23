@@ -1,5 +1,5 @@
-import { Collection, MongoClient, ObjectId } from "mongodb";
-import { Todo, PriorityLevel, RecurrencePattern } from "../models/todo";
+import { Collection, MongoClient } from "mongodb";
+import { Todo } from "../models/todo";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics";
 import dotenv from "dotenv";
 dotenv.config();
@@ -18,7 +18,7 @@ export class TodoRepo {
 
     try {
       if (!todo.todoName || todo.todoName.trim() === "") {
-        throw new Error("Todo requires text");
+        throw new Error("Todo requires name");
       }
 
       await this.collection.insertOne(todo);
