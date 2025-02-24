@@ -334,4 +334,99 @@ export class NoteRepo {
       timer.observeDuration();
     }
   }
+  async findNotes(
+    userId: string,
+    searchParams: {
+      keywords?: string;
+      tags?: string[];
+      startDate?: Date;
+      endDate?: Date;
+    },
+  ): Promise<Note[]> {
+    const timer = trackDbOperation("find", "note");
+
+    try {
+      const filter: Filter<Note> = { userId };
+
+      if (searchParams.keywords) {
+        filter.$text = { $search: searchParams.keywords };
+      }
+
+      if (searchParams.tags && searchParams.tags.length > 0) {
+        filter.tags = { $in: searchParams.tags };
+      }
+
+      if (searchParams.startDate || searchParams.endDate) {
+        filter.createdAt = {};
+        if (searchParams.startDate) {
+          filter.createdAt.$gte = searchParams.startDate;
+        }
+        if (searchParams.endDate) {
+          filter.createdAt.$lte = searchParams.endDate;
+        }
+      }
+
+      const options: FindOptions<Note> = { sort: { createdAt: -1 } };
+      const cursor = this.collection.find(filter, options);
+      const notes: Note[] = await cursor.toArray();
+
+      return notes;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "find_notes_failed",
+      });
+      console.log("Failed to find notes");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async countNotesByTag(userId: string, tag: string): Promise<number> {
+    const timer = trackDbOperation("count", "note");
+
+    try {
+      const filter: Filter<Note> = { userId, tags: tag };
+      const count = await this.collection.countDocuments(filter);
+      return count;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "count_notes_by_tag_failed",
+      });
+      console.log("Failed to count notes by tag");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async getSearchSuggestions(userId: string, query: string): Promise<string[]> {
+    const timer = trackDbOperation("find", "note");
+
+    try {
+      const filter: Filter<Note> = {
+        userId,
+        $text: { $search: query },
+      };
+      const options: FindOptions<Note> = {
+        projection: { _id: 0, title: 1 },
+        limit: 10,
+      };
+      const cursor = this.collection.find(filter, options);
+      const notes: Note[] = await cursor.toArray();
+      const suggestions = notes.map((note) => note.noteName);
+      return suggestions;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "get_search_suggestions_failed",
+      });
+      console.log("Failed to get search suggestions");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
 }
