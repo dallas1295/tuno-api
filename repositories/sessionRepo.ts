@@ -62,6 +62,7 @@ export class TodoRepo {
       });
       throw new Error("failed to create session in database: " + error.message);
     } finally {
+      cancel();
       timer.observeDuration();
     }
   }
@@ -157,6 +158,129 @@ export class TodoRepo {
       throw new Error(`failed to update session in database: ${error.message}`);
     } finally {
       cancel();
+      timer.observeDuration();
+    }
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    const timer = trackDbOperation("delete", "sessions");
+
+    try {
+      await this.collection.deleteOne({ sessionId });
+    } catch (error) {
+      ErrorCounter.inc({ type: "database", operation: "delete_session" });
+      throw new Error("Failed to delete session");
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async deleteUserSessions(userId: string): Promise<void> {
+    const timer = trackDbOperation("deleteMany", "sessions");
+
+    try {
+      await this.collection.deleteMany({ userId });
+    } catch (error) {
+      ErrorCounter.inc({ type: "database", operation: "delete_user_sessions" });
+      throw new Error(`Failed to delete user sessions: ${error.message}`);
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async endSession(sessionId: string): Promise<void> {
+    const timer = trackDbOperation("update", "sessions");
+
+    try {
+      const updateResult = await this.collection.updateOne(
+        { sessionId },
+        { $set: { isActive: false } },
+      );
+
+      if (updateResult.matchedCount === 0) {
+        ErrorCounter.inc({ type: "database", operation: "session_not_found" });
+        throw new Error("Session not found");
+      }
+    } catch (error) {
+      ErrorCounter.inc({ type: "database", operation: "end_session" });
+      throw new Error(`failed to end session: ${error.Message}`);
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async getUserActiveSessions(userId: string): Promise<Session[]> {
+    const timer = trackDbOperation("find", "sessions");
+
+    try {
+      return await this.collection.find({ userId, isActive: true }).toArray();
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "get_user_active_sessions",
+      });
+      throw new Error(`Failed to get user active sessions: ${error.message}`);
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async endAllUserSessions(userId: string): Promise<void> {
+    const timer = trackDbOperation("updateMany", "sessions");
+
+    try {
+      await this.collection.updateMany(
+        { userId, isActive: true },
+        { $set: { isActive: false } },
+      );
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "end_all_user_sessions",
+      });
+      throw new Error(`Failed to end all user sessions: ${error.message}`);
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async endLeastActiveSession(userId: string): Promise<void> {
+    const timer = trackDbOperation("updateOne", "sessions");
+
+    try {
+      const session = await this.collection.findOne(
+        { userId, isActive: true },
+        { sort: { lastActivityAt: 1 } },
+      );
+      if (session) {
+        await this.collection.updateOne(
+          { sessionId: session.sessionId },
+          { $set: { isActive: false } },
+        );
+      }
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "end_least_active_session",
+      });
+      throw new Error(`Failed to end least active session: ${error.message}`);
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async countActiveSessions(userId: string): Promise<number> {
+    const timer = trackDbOperation("countDocuments", "sessions");
+
+    try {
+      return await this.collection.countDocuments({ userId, isActive: true });
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "count_active_sessions",
+      });
+      throw new Error(`Failed to count active sessions: ${error.message}`);
+    } finally {
       timer.observeDuration();
     }
   }
