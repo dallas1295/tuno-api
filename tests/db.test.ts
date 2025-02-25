@@ -1,4 +1,4 @@
-import { connectToDb, dbConfig } from "../config/db";
+import { connectToDb, closeDatabaseConnection, dbConfig } from "../config/db";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 
@@ -16,9 +16,8 @@ describe("Database Connection", () => {
   });
 
   afterAll(async () => {
-    if (client) {
-      await client.close();
-    }
+    await closeDatabaseConnection();
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Ensure all async operations are complete
   });
 
   it("should connect to the database successfully with authentication", async () => {
@@ -38,8 +37,8 @@ describe("Database Connection", () => {
       dbName: process.env.MONGO_DB,
       maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE as string),
       minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE as string),
-      maxIdleTimeMS: parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) *
-        1000, // Convert to milliseconds
+      maxIdleTimeMS:
+        parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) * 1000, // Convert to milliseconds
     });
   });
 
@@ -82,12 +81,5 @@ describe("Database Connection", () => {
     );
 
     await expect(timeoutClient.connect()).rejects.toThrow();
-  });
-
-  afterAll(async () => {
-    if (client) {
-      await client.close();
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
 });
