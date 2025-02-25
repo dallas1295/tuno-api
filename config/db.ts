@@ -65,20 +65,43 @@ export const dbConfig: DbConfig = {
  * @returns A Promise that resolves to a MongoClient instance if the connection is successful.
  * @throws If the connection fails, the function logs an error to the console and exits the process.
  */
+let client: MongoClient | null = null;
 
 export const connectToDb = async (): Promise<MongoClient> => {
-  try {
-    const client = new MongoClient(dbConfig.uri, {
-      maxPoolSize: dbConfig.maxPoolSize,
-      minPoolSize: dbConfig.minPoolSize,
-      maxIdleTimeMS: dbConfig.maxIdleTimeMS,
-    });
+  if (client) {
+    console.log("Reusing existing MongDB client instance");
+    return client;
+  }
+  console.log("Creating new MongoDb instance");
+  client = new MongoClient(dbConfig.uri, {
+    maxPoolSize: dbConfig.maxPoolSize,
+    minPoolSize: dbConfig.minPoolSize,
+    maxIdleTimeMS: dbConfig.maxIdleTimeMS,
+  });
 
+  try {
     await client.connect();
     console.log("Connected to the database");
     return client;
   } catch (error) {
     console.error("Something went wrong connecing: ", error);
     process.exit(1);
+  }
+};
+
+export const closeDatabaseConnection = async (): Promise<void> => {
+  if (client) {
+    console.log("Closing MongoDB connection");
+    try {
+      await client.close();
+      console.log("MongoDB connection closed");
+    } catch (error) {
+      console.error("Error closing MongoDB connection:", error);
+    } finally {
+      client = null;
+      console.log("MongoDB reset to null");
+    }
+  } else {
+    console.log("No MongoDB client to close");
   }
 };
