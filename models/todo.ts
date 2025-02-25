@@ -75,7 +75,7 @@ export interface Todo {
   /**
    * A boolean value indicating whether the to-do item has been completed.
    */
-  complete: boolean;
+  isComplete: boolean;
 
   /**
    * The date and time when the to-do item was created.
