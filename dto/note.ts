@@ -18,4 +18,10 @@ export interface NoteResponse {
   links: { [key: string]: NoteLink };
 }
 
-export interface NotePageResponse {}
+export interface NotePageResponse {
+  notes: NoteResponse[];
+  totalCount: number;
+  pageCount: number;
+  currentPage: number;
+  links: { [keys: string]: NoteLink };
+}
