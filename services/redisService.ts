@@ -22,9 +22,18 @@ export const redisService = {
   ): Promise<void> => {
     await client.set(key, value, { EX: expirationInSeconds });
   },
+  getKey: async (key: string): Promise<string | null> => {
+    return await client.get(key);
+  },
+  deleteKey: async (key: string): Promise<void> => {
+    await client.del(key);
+  },
   keyExists: async (key: string): Promise<boolean> => {
     const exists = await client.exists(key);
     return exists > 0;
+  },
+  getKeysByPattern: async (pattern: string): Promise<string[]> => {
+    return await client.keys(pattern);
   },
   isConnected: async (): Promise<boolean> => {
     try {
