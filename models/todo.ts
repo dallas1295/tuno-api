@@ -80,7 +80,7 @@ export interface Todo {
   /**
    * The date and time when the to-do item was created.
    */
-  createdAt: string; // Consider using Date if dealing with actual Date objects
+  createdAt: Date;
 
   /**
    * The date and time when the to-do item was last updated.
@@ -114,10 +114,10 @@ export interface Todo {
   /**
    * The recurrence pattern for the to-do item.
    */
-  recurrancePattern?: RecurrencePattern;
+  recurrencePattern?: RecurrencePattern;
 
   /**
    * The date when the recurrence should end.
    */
-  recurranceEnd?: Date;
+  recurrenceEnd?: Date;
 }
