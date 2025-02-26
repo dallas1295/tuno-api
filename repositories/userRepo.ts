@@ -13,7 +13,7 @@ dotenv.config();
 /**
  * Provides methods for managing user data in the MongoDB database.
  */
-export class UserRepository {
+export class UserRepo {
   /**
    * The MongoDB collection for storing user documents.
    * @private
