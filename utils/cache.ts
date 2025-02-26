@@ -14,10 +14,6 @@ export class SessionCache {
   async deleteSession(sessionId: string): Promise<void> {
     this.cache.delete(sessionId);
   }
-
-  async incrementSessionVersion(userId: string): Promise<void> {
-    // Implement version increment logic
-  }
 }
 
 export const GlobalSessionCache = new SessionCache();
