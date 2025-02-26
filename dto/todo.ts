@@ -23,68 +23,68 @@ interface TodoResponse {
   links: { [key: string]: TodoLink };
 }
 
-export async function toTodoResponse(
-  todo: Todo,
-  links: { [key: string]: TodoLink },
-): Promise<TodoResponse> {
-  let response: TodoResponse = {
-    todoId: todo.todoId,
-    todoName: todo.todoName,
-    description: todo.description,
-    isComplete: todo.isComplete,
-    createdAt: todo.createdAt,
-    updatedAt: todo.updatedAt,
-    links: links,
-  };
+export const todoService = {
+  toTodoResponse: async (
+    todo: Todo,
+    links: { [key: string]: TodoLink },
+  ): Promise<TodoResponse> => {
+    let response: TodoResponse = {
+      todoId: todo.todoId,
+      todoName: todo.todoName,
+      description: todo.description,
+      isComplete: todo.isComplete,
+      createdAt: todo.createdAt,
+      updatedAt: todo.updatedAt,
+      links: links,
+    };
 
-  if (todo.priorityLevel) {
-    response.priorityLevel = todo.priorityLevel;
-  }
-
-  if (todo.dueDate) {
-    response.dueDate = todo.dueDate;
-  }
-
-  if (todo.tags) {
-    response.tags = todo.tags;
-  }
-
-  if (todo.isRecurring) {
-    response.isRecurring = todo.isRecurring;
-    response.recurrencePattern = todo.recurrencePattern;
-    if (response.recurrenceEnd) {
-      response.recurrenceEnd = todo.recurrenceEnd;
+    if (todo.priorityLevel) {
+      response.priorityLevel = todo.priorityLevel;
     }
-  }
 
-  if (todo.dueDate) {
-    response.dueDate = todo.dueDate;
+    if (todo.dueDate) {
+      response.dueDate = todo.dueDate;
+    }
 
-    if (!todo.isComplete) {
-      const now = new Date();
+    if (todo.tags) {
+      response.tags = todo.tags;
+    }
 
-      if (todo.dueDate < now) {
-        response.timeUntilDue = "Overdue";
-      } else {
-        const timeUntilDue = Math.round(
-          (todo.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60),
-        );
-
-        response.timeUntilDue = `${timeUntilDue} hours`;
+    if (todo.isRecurring) {
+      response.isRecurring = todo.isRecurring;
+      response.recurrencePattern = todo.recurrencePattern;
+      if (todo.recurrenceEnd) {
+        response.recurrenceEnd = todo.recurrenceEnd;
       }
     }
-  }
 
-  return response;
-}
+    if (todo.dueDate) {
+      response.dueDate = todo.dueDate;
 
-export async function toManyTodoResponses(
-  todos: Todo[],
-  getTodoLinks: (todo: Todo) => { [key: string]: TodoLink },
-): Promise<TodoResponse[]> {
-  const responses: TodoResponse[] = await Promise.all(
-    todos.map((todo) => toTodoResponse(todo, getTodoLinks(todo))),
-  );
+      if (!todo.isComplete) {
+        const now = new Date();
 
-  return responses;
-}
+        if (todo.dueDate < now) {
+          response.timeUntilDue = "Overdue";
+        } else {
+          const timeUntilDue = Math.round(
+            (todo.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60),
+          );
+
+          response.timeUntilDue = `${timeUntilDue} hours`;
+        }
+      }
+    }
+
+    return response;
+  },
+
+  toManyTodoResponses: async (
+    todos: Todo[],
+    getTodoLinks: (todo: Todo) => { [key: string]: TodoLink },
+  ): Promise<TodoResponse[]> => {
+    return Promise.all(
+      todos.map((todo) => todoService.toTodoResponse(todo, getTodoLinks(todo))),
+    );
+  },
+};
