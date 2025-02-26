@@ -26,7 +26,7 @@ export interface NotePageResponse {
   links: { [keys: string]: NoteLink };
 }
 
-export async function toSingleNoteResponse(
+export async function toNoteResponse(
   note: Note,
   links: { [key: string]: NoteLink },
 ): Promise<NoteResponse> {
@@ -51,7 +51,7 @@ export async function toManyNoteResponses(
   getNoteLinks: (note: Note) => { [key: string]: NoteLink },
 ): Promise<NoteResponse[]> {
   const responses: NoteResponse[] = await Promise.all(
-    notes.map((note) => toSingleNoteResponse(note, getNoteLinks(note))),
+    notes.map((note) => toNoteResponse(note, getNoteLinks(note))),
   );
 
   return responses;
