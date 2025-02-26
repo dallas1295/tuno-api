@@ -26,6 +26,11 @@ export interface User {
    * The date and time when the user account was created.
    */
   createdAt: Date;
+  /**
+   * email associate with the user account.
+   */
+
+  email: string;
 
   /**
    * The date and time when the user last changed their email address.
