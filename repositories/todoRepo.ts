@@ -101,7 +101,7 @@ export class TodoRepo {
           priorityLevel: updates.priorityLevel,
           dueDate: updates.dueDate,
           reminderAt: updates.reminderAt,
-          recurrencePattern: updates.recurrancePattern,
+          recurrencePattern: updates.recurrencePattern,
         },
       };
       const result = await this.collection.updateOne(filter, update);
