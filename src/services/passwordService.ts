@@ -1,5 +1,5 @@
-import * as argon2 from "argon2";
-import { validatePassword } from "../utils/password";
+import * as argon2 from "npm:argon2";
+import { validatePassword } from "../utils/password.ts";
 
 const passwordConfig = {
   memory: 64 * 1024,

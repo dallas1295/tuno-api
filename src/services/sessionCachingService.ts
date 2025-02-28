@@ -1,5 +1,5 @@
-import { redisService } from "./redisService";
-import { Session } from "../models/session";
+import { redisService } from "../services/redisService.ts";
+import { Session } from "../models/session.ts";
 
 class SessionCacheService {
   async setSession(session: Session): Promise<void> {
