@@ -1,9 +1,7 @@
-import { createClient } from "redis";
-import dotenv from "dotenv";
+import { createClient } from "npm:redis";
+import "jsr:std/dotenv/load";
 
-dotenv.config();
-
-const redisURL: string = process.env.REDIS_URL as string;
+const redisURL: string = Deno.env.get(REDIS_URL) as string;
 
 if (!redisURL) {
   throw new Error("Redis URL is not provided");

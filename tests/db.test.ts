@@ -1,4 +1,8 @@
-import { connectToDb, closeDatabaseConnection, dbConfig } from "../config/db";
+import {
+  connectToDb,
+  closeDatabaseConnection,
+  dbConfig,
+} from "../src/config/db";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 

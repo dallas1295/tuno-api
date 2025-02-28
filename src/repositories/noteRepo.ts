@@ -4,13 +4,10 @@ import {
   Filter,
   FindOptions,
   UpdateFilter,
-  ObjectId,
 } from "mongodb";
 import { Note } from "../models/note";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics";
-import dotenv from "dotenv";
-
-dotenv.config();
+import "jsr:@std/dotenv/load";
 
 export class NoteRepo {
   private collection: Collection<Note>;
