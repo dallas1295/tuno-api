@@ -4,11 +4,10 @@
  * retrieving, updating, and deleting user accounts.
  */
 
-import { Collection, MongoClient, ObjectId } from "mongodb";
-import { User, UserProfile } from "../models/user";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics";
-import dotenv from "dotenv";
-dotenv.config();
+import { Collection, MongoClient } from "npm:mongodb";
+import { User } from "../models/user.ts";
+import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import "jsr:@std/dotenv/load";
 
 /**
  * Provides methods for managing user data in the MongoDB database.
@@ -26,8 +25,8 @@ export class UserRepo {
    * @param db A MongoClient instance connected to the MongoDB database.
    */
   constructor(db: MongoClient) {
-    const dbName = process.env.MONGO_DB as string;
-    const collectionName = process.env.USER_COLLECTION as string;
+    const dbName = Deno.env.get("MONGO_DB") as string;
+    const collectionName = Deno.env.get("USER_COLLECTION") as string;
     this.collection = db.db(dbName).collection(collectionName);
   }
 
