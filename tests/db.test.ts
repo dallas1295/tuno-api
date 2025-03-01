@@ -1,89 +1,94 @@
+import { connectToDb, dbConfig } from "../src/config/db.ts";
+import { MongoClient, MongoClientOptions } from "npm:mongodb";
+import "jsr:@std/dotenv/load";
 import {
-  connectToDb,
-  closeDatabaseConnection,
-  dbConfig,
-} from "../src/config/db";
-import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
+  assertExists,
+  assert,
+  assertEquals,
+  assertRejects,
+} from "jsr:@std/assert";
 
-dotenv.config();
-
-describe("Database Connection", () => {
-  let client: MongoClient;
-
-  beforeAll(() => {
-    // Verify environment variables are set
-    expect(process.env.MONGO_USERNAME).toBeDefined();
-    expect(process.env.MONGO_PASSWORD).toBeDefined();
-    expect(process.env.MONGO_URI).toBeDefined();
-    expect(process.env.MONGO_DB).toBeDefined();
+Deno.test("Database Connection", async (t) => {
+  await t.step("Verify environment variables are set", () => {
+    assertExists(Deno.env.get("MONGO_USERNAME"));
+    assertExists(Deno.env.get("MONGO_PASSWORD"));
+    assertExists(Deno.env.get("MONGO_URI"));
+    assertExists(Deno.env.get("MONGO_DB"));
   });
 
-  afterAll(async () => {
-    await closeDatabaseConnection();
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Ensure all async operations are complete
+  await t.step(
+    "Connect to the database successfully with authentication",
+    async () => {
+      const client = await connectToDb();
+      assertExists(client);
+      assert(client instanceof MongoClient);
+
+      // Test if we can actually connect and perform operations
+      const db = client.db(dbConfig.dbName);
+      const collections = await db.listCollections().toArray();
+      assert(Array.isArray(collections));
+    },
+  );
+
+  await t.step("Proper database configuration", () => {
+    assert(dbConfig.uri.includes("mongodb://"));
+    assertEquals(dbConfig.dbName, Deno.env.get("MONGO_DB"));
+    assertEquals(
+      dbConfig.maxPoolSize,
+      parseInt(Deno.env.get("MONGO_MAX_POOL_SIZE")!),
+    );
+    assertEquals(
+      dbConfig.minPoolSize,
+      parseInt(Deno.env.get("MONGO_MIN_POOL_SIZE")!),
+    );
+    assertEquals(
+      dbConfig.maxIdleTimeMS,
+      parseInt(Deno.env.get("MONGO_MAX_CONN_IDLE_TIME")!) * 1000,
+    );
   });
 
-  it("should connect to the database successfully with authentication", async () => {
-    client = await connectToDb();
-    expect(client).toBeDefined();
-    expect(client).toBeInstanceOf(MongoClient);
-
-    // Test if we can actually connect and perform operations
-    const db = client.db(dbConfig.dbName);
-    const collections = await db.listCollections().toArray();
-    expect(Array.isArray(collections)).toBeTruthy();
-  });
-
-  it("should have proper database configuration", () => {
-    expect(dbConfig).toEqual({
-      uri: expect.stringContaining("mongodb://"),
-      dbName: process.env.MONGO_DB,
-      maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE as string),
-      minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE as string),
-      maxIdleTimeMS:
-        parseInt(process.env.MONGO_MAX_CONN_IDLE_TIME as string) * 1000, // Convert to milliseconds
-    });
-  });
-
-  it("should fail with incorrect credentials", async () => {
+  await t.step("Fail with incorrect credentials", async () => {
     const invalidClient = new MongoClient(
       `mongodb://invalid:wrongpassword@localhost:27017/${dbConfig.dbName}`,
     );
 
-    await expect(invalidClient.connect()).rejects.toThrow();
+    await assertRejects(async () => {
+      await invalidClient.connect();
+    });
   });
 
-  it("should be able to access specified collections", async () => {
-    client = await connectToDb();
+  await t.step("Access specified collections", async () => {
+    const client = await connectToDb();
     const db = client.db(dbConfig.dbName);
 
     // Test access to your collections
     const collections = [
-      process.env.USER_COLLECTION,
-      process.env.NOTE_COLLECTION,
-      process.env.TODO_COLLECTION,
-      process.env.SESSION_COLLECTION,
+      Deno.env.get("USER_COLLECTION"),
+      Deno.env.get("NOTE_COLLECTION"),
+      Deno.env.get("TODO_COLLECTION"),
+      Deno.env.get("SESSION_COLLECTION"),
     ];
 
     for (const collectionName of collections) {
       if (collectionName) {
         const collection = db.collection(collectionName);
-        expect(collection).toBeDefined();
+        assertExists(collection);
         // Optional: Test if we can query the collection
         const count = await collection.countDocuments();
-        expect(typeof count).toBe("number");
+        assertEquals(typeof count, "number");
       }
     }
   });
 
-  it("should handle connection timeouts", async () => {
+  await t.step("Handle connection timeouts", async () => {
     // Test with a non-existent MongoDB server
     const timeoutClient = new MongoClient(
       "mongodb://localhost:27018", // Using wrong port
-      { serverSelectionTimeoutMS: 1000 }, // Set a short timeout
+      { serverSelectionTimeoutMS: 1000 } as MongoClientOptions,
     );
 
-    await expect(timeoutClient.connect()).rejects.toThrow();
+    await assertRejects(async () => {
+      await timeoutClient.connect();
+    });
   });
 });
