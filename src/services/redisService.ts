@@ -9,7 +9,9 @@ if (!redisURL) {
 
 const client = createClient({ url: redisURL });
 
-client.on("error", (error) => console.log(`Redis client error ${error}`));
+client.on("error", (error: string) =>
+  console.log(`Redis client error ${error}`),
+);
 await client.connect();
 
 export const redisService = {

@@ -231,6 +231,8 @@ export class NoteRepo {
         type: "database",
         operation: "archive_note_failed",
       });
+      console.log("Failed to archive note");
+      throw error;
     } finally {
       timer.observeDuration();
     }

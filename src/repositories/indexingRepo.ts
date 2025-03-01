@@ -1,7 +1,5 @@
-import { Db, IndexDescription, CreateIndexesOptions } from "mongodb";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { Db, IndexDescription, CreateIndexesOptions } from "npm:mongodb";
+import "jsr:@std/dotenv/load";
 
 const noteIndexes: IndexDescription[] = [
   {
@@ -86,15 +84,15 @@ export async function setupIndexes(db: Db): Promise<void> {
     throw new Error("Dataase instance is nil");
   }
 
-  const dbName = process.env.MONGO_DB as string;
+  const dbName = Deno.env.get("MONGO_DB") as string;
   console.log(`Setting up indexes for: ${dbName}`);
 
   try {
     const collections = [
-      process.env.NOTES_COLLECTION as string,
-      process.env.TODOS_COLLECTION as string,
-      process.env.USERS_COLLECTION as string,
-      process.env.SESSIONS_COLLECTION as string,
+      Deno.env.get("NOTES_COLLECTION") as string,
+      Deno.env.get("TODOS_COLLECTION") as string,
+      Deno.env.get("USERS_COLLECTION") as string,
+      Deno.env.get("SESSIONS_COLLECTION") as string,
     ];
     for (const collName of collections) {
       console.log(`Ensuring collection exists: ${dbName}.${collName}`);
@@ -109,23 +107,24 @@ export async function setupIndexes(db: Db): Promise<void> {
     }
 
     const notesCollection = db.collection(
-      process.env.NOTES_COLLECTION as string,
+      Deno.env.get("NOTES_COLLECTION") as string,
     );
     await notesCollection.createIndexes(noteIndexes);
 
     const todosCollection = db.collection(
-      process.env.TODOS_COLLECTION as string,
+      Deno.env.get("TODOS_COLLECTION") as string,
     );
     await todosCollection.createIndexes(todoIndexes);
 
     const usersCollection = db.collection(
-      process.env.USERS_COLLECTION as string,
+      Deno.env.get("USERS_COLLECTION") as string,
     );
     await usersCollection.createIndexes(userIndexes);
 
     const sessionsCollection = db.collection(
-      process.env.SESSIONS_COLLECTION as string,
+      Deno.env.get("SESSIONS_COLLECTION") as string,
     );
+
     await sessionsCollection.createIndexes(sessionIndexes);
 
     console.log(`Successfully creatd all indexes in database: ${dbName}`);

@@ -1,17 +1,16 @@
-import { Collection, MongoClient, UpdateResult } from "mongodb";
-import { Session } from "../models/session";
-import { createContext } from "../utils/context";
-import { SessionCache, GlobalSessionCache } from "../utils/cache";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics";
-import dotenv from "dotenv";
-dotenv.config();
+import { Collection, MongoClient, UpdateResult } from "npm:mongodb";
+import { Session } from "../models/session.ts";
+import { createContext } from "../utils/context.ts";
+import { GlobalSessionCache } from "../utils/cache.ts";
+import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import "jsr:@std/dotenv/load";
 
 export class TodoRepo {
   private collection: Collection<Session>;
 
   constructor(db: MongoClient) {
-    const dbName = process.env.MONGO_DB as string;
-    const collectionName = process.env.SESSIO_COLLECTION as string;
+    const dbName = Deno.env.get("MONGO_DB") as string;
+    const collectionName = Deno.env.get("SESSION_COLLECTION") as string;
     this.collection = db.db(dbName).collection(collectionName);
   }
 
