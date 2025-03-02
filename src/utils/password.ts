@@ -1,4 +1,4 @@
-export async function validatePassword(password: string): Promise<boolean> {
+export function validatePassword(password: string): Promise<boolean> {
   // Password must:
   // - Be at least 8 characters long
   // - Contain at least 2 numbers
@@ -8,7 +8,7 @@ export async function validatePassword(password: string): Promise<boolean> {
   let hasSpecial = false;
 
   if (password.length < 8) {
-    return false;
+    return Promise.resolve(false);
   }
   for (const char of password) {
     if (/\d{2,}/.test(char)) {
@@ -18,5 +18,5 @@ export async function validatePassword(password: string): Promise<boolean> {
     }
   }
 
-  return hasNumber && hasSpecial;
+  return Promise.resolve(hasNumber && hasSpecial);
 }

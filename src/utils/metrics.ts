@@ -4,7 +4,7 @@
  * operation durations, errors, and active connections.
  */
 
-import { Counter, Gauge, Histogram } from "prom-client";
+import { Counter, Gauge, Histogram } from "npm:prom-client";
 
 /**
  * Histogram for tracking the duration of database operations.
