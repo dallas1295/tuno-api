@@ -1,12 +1,12 @@
-import { Note } from "../models/note";
-import { NoteRepo } from "../repositories/noteRepo";
-import { trackDbOperation, ErrorCounter } from "../utils/metrics";
-import { MongoClient, UpdateFilter } from "mongodb";
+import { Note } from "../models/note.ts";
+import { NoteRepo } from "../repositories/noteRepo.ts";
+import { trackDbOperation, ErrorCounter } from "../utils/metrics.ts";
+import { MongoClient, UpdateFilter } from "npm:mongodb";
 
-const dbClient = new MongoClient(process.env.MONGO_URI as string);
+const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
 const noteRepo = new NoteRepo(dbClient);
 
-async function togglePin(userId: string, noteId: string): Promise<void> {
+export async function togglePin(userId: string, noteId: string): Promise<void> {
   const timer = trackDbOperation("pinned", "note");
 
   try {

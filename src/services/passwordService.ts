@@ -22,8 +22,8 @@ export async function hashPassword(password: string): Promise<string> {
       parallelism: passwordConfig.keyLength,
     });
     return hash;
-  } catch (error) {
-    throw new Error(`Error hashing password: ${error.message}`);
+  } catch (error: unknown) {
+    throw new Error(`Error hashing password: ${error instanceof Error}`);
   }
 }
 
@@ -34,6 +34,6 @@ export async function verifyPassword(
   try {
     return await argon2.verify(storedPassword, providedPassword);
   } catch (error) {
-    throw new Error(`Error verifying password: ${error.message}`);
+    throw new Error(`Error verifying password: ${error instanceof Error}`);
   }
 }
