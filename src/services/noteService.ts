@@ -2,7 +2,6 @@ import { Note } from "../models/note.ts";
 import { NoteRepo } from "../repositories/noteRepo.ts";
 import { trackDbOperation, ErrorCounter } from "../utils/metrics.ts";
 import { MongoClient, UpdateFilter } from "npm:mongodb";
-import { uuid } from "jsr:@std/uuid";
 
 const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
 const noteRepo = new NoteRepo(dbClient);
@@ -29,7 +28,7 @@ export async function createNote(
   const timer = trackDbOperation("create", "note");
 
   try {
-    const noteId = uuid.v4();
+    const noteId = crypto.randomUUID();
 
     const note: Note = {
       noteId,
