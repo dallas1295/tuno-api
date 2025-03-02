@@ -1,4 +1,4 @@
-import { Note } from "../models/note";
+import { Note } from "../models/note.ts";
 
 export interface NoteLink {
   href: string;
@@ -26,53 +26,45 @@ export interface NotePageResponse {
   links: { [keys: string]: NoteLink };
 }
 
-export const noteService = {
-  toNoteResponse: async (
-    note: Note,
-    links: { [key: string]: NoteLink },
-  ): Promise<NoteResponse> => {
-    return {
-      noteId: note.noteId,
-      noteName: note.noteName,
-      content: note.content,
-      tags: note.tags,
-      isPinned: note.isPinned,
-      pinnedPosition:
-        note.pinnedPosition !== 0 ? note.pinnedPosition : undefined,
-      isArchived: note.isArchived,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      links: links,
-    };
-  },
+export function toNoteResponse(
+  note: Note,
+  links: { [key: string]: NoteLink },
+): NoteResponse {
+  return {
+    noteId: note.noteId,
+    noteName: note.noteName,
+    content: note.content,
+    tags: note.tags,
+    isPinned: note.isPinned,
+    pinnedPosition: note.pinnedPosition !== 0 ? note.pinnedPosition : undefined,
+    isArchived: note.isArchived,
+    createdAt: note.createdAt,
+    updatedAt: note.updatedAt,
+    links: links,
+  };
+}
 
-  toManyNoteResponses: async (
-    notes: Note[],
-    getNoteLinks: (note: Note) => { [key: string]: NoteLink },
-  ): Promise<NoteResponse[]> => {
-    return Promise.all(
-      notes.map((note) => noteService.toNoteResponse(note, getNoteLinks(note))),
-    );
-  },
+export function toManyNoteResponses(
+  notes: Note[],
+  getNoteLinks: (note: Note) => { [key: string]: NoteLink },
+): NoteResponse[] {
+  return notes.map((note) => toNoteResponse(note, getNoteLinks(note)));
+}
 
-  newNotesPageResponse: async (
-    notes: Note[],
-    totalCount: number,
-    pageCount: number,
-    currentPage: number,
-    links: { [key: string]: NoteLink },
-    getNoteLinks: (note: Note) => { [key: string]: NoteLink },
-  ): Promise<NotePageResponse> => {
-    const noteResponses = await noteService.toManyNoteResponses(
-      notes,
-      getNoteLinks,
-    );
-    return {
-      notes: noteResponses,
-      totalCount: totalCount,
-      pageCount: pageCount,
-      currentPage: currentPage,
-      links: links,
-    };
-  },
-};
+export function newNotesPageResponse(
+  notes: Note[],
+  totalCount: number,
+  pageCount: number,
+  currentPage: number,
+  links: { [key: string]: NoteLink },
+  getNoteLinks: (note: Note) => { [key: string]: NoteLink },
+): NotePageResponse {
+  const noteResponses = toManyNoteResponses(notes, getNoteLinks);
+  return {
+    notes: noteResponses,
+    totalCount: totalCount,
+    pageCount: pageCount,
+    currentPage: currentPage,
+    links: links,
+  };
+}

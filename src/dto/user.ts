@@ -1,4 +1,4 @@
-import { User } from "../models/user";
+import { User } from "../models/user.ts";
 
 interface UserLink {
   href: string;
@@ -12,10 +12,10 @@ interface UserResponse {
   links: { [key: string]: UserLink };
 }
 
-export async function toUserResponse(
+export function toUserResponse(
   user: User,
   links: { [key: string]: UserLink },
-): Promise<UserResponse> {
+): UserResponse {
   const response: UserResponse = {
     username: user.username,
     email: user.email,
