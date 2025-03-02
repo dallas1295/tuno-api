@@ -4,9 +4,11 @@
     "test": "deno test --allow-read --allow-sys --allow-env --allow-net"
   },
   "imports": {
+    "@oak/oak": "jsr:@oak/oak@^17.1.4",
     "@panva/jose": "jsr:@panva/jose@^6.0.8",
     "@std/assert": "jsr:@std/assert@^1.0.11",
     "@std/dotenv": "jsr:@std/dotenv@^0.225.3",
+    "@std/uuid": "jsr:@std/uuid@^1.0.4",
     "@types/mongodb": "npm:@types/mongodb@^4.0.7",
     "@types/node": "npm:@types/node@^22.13.8",
     "@types/redis": "npm:@types/redis@^4.0.11",
@@ -17,7 +19,7 @@
     "redis": "npm:redis@^4.7.0"
   },
   "compilerOptions": {
-    "strict": true
+    "strict": true,
   },
   "test": {
     "include": ["tests/", "**/*_test.ts"],
