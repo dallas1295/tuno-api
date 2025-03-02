@@ -1,12 +1,14 @@
-import { Db, IndexDescription, CreateIndexesOptions } from "npm:mongodb";
-import "jsr:@std/dotenv/load";
+import { Db, IndexDescription } from "mongodb";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const noteIndexes: IndexDescription[] = [
   {
-    key: { userId: 1, createdAt: -1 },
+    key: { userId: 1, createdAt: -1 } as const,
     name: "user_notes_date",
   },
-  { key: { userId: 1, isPinned: 1 }, name: "user_notes_pinned" },
+  { key: { userId: 1, isPinned: 1 }, name: "user_notes_pinned" } as const,
   {
     key: { userId: 1, isArchived: 1 },
     name: "user_notes_archived",
@@ -64,72 +66,70 @@ const userIndexes: IndexDescription[] = [
   },
 ];
 
-const sessionIndexes: IndexDescription[] = [
-  {
-    key: { userId: 1, sessionId: 1 },
-    name: "user_session_index",
-  },
-  {
-    key: { expiresAt: 1 },
-    name: "session_expiry_index",
-  },
-  {
-    key: { userId: 1, isActive: 1 },
-    name: "user_active_sessions",
-  },
-];
-
 export async function setupIndexes(db: Db): Promise<void> {
   if (!db) {
-    throw new Error("Dataase instance is nil");
+    throw new Error("Database instance is nil");
   }
 
-  const dbName = Deno.env.get("MONGO_DB") as string;
+  const dbName = process.env["MONGO_DB"];
+  if (!dbName) {
+    throw new Error("MONGO_DB environment variable is not set");
+  }
+
   console.log(`Setting up indexes for: ${dbName}`);
 
   try {
     const collections = [
-      Deno.env.get("NOTES_COLLECTION") as string,
-      Deno.env.get("TODOS_COLLECTION") as string,
-      Deno.env.get("USERS_COLLECTION") as string,
-      Deno.env.get("SESSIONS_COLLECTION") as string,
-    ];
+      process.env["NOTE_COLLECTION"],
+      process.env["TODO_COLLECTION"],
+      process.env["USER_COLLECTION"],
+      process.env["SESSION_COLLECTION"],
+    ].filter((name): name is string => !!name);
+
     for (const collName of collections) {
       console.log(`Ensuring collection exists: ${dbName}.${collName}`);
 
       try {
         await db.createCollection(collName);
-      } catch (error) {
-        if (!error.message.includes("NameSpaceExists")) {
-          throw new Error(`Failed to create collection ${collName}`);
+      } catch (error: unknown) {
+        // Proper error handling with type checking
+        if (
+          error instanceof Error && !error.message.includes("NamespaceExists")
+        ) {
+          throw new Error(
+            `Failed to create collection ${collName}: ${error.message}`,
+          );
         }
       }
     }
 
-    const notesCollection = db.collection(
-      Deno.env.get("NOTES_COLLECTION") as string,
-    );
+    const noteCollection = process.env["NOTE_COLLECTION"];
+    const todoCollection = process.env["TODO_COLLECTION"];
+    const userCollection = process.env["USER_COLLECTION"];
+
+    if (!noteCollection || !todoCollection || !userCollection) {
+      throw new Error(
+        "Required collection names are not set in environment variables",
+      );
+    }
+
+    const notesCollection = db.collection(noteCollection);
     await notesCollection.createIndexes(noteIndexes);
 
-    const todosCollection = db.collection(
-      Deno.env.get("TODOS_COLLECTION") as string,
-    );
+    const todosCollection = db.collection(todoCollection);
     await todosCollection.createIndexes(todoIndexes);
 
-    const usersCollection = db.collection(
-      Deno.env.get("USERS_COLLECTION") as string,
-    );
+    const usersCollection = db.collection(userCollection);
     await usersCollection.createIndexes(userIndexes);
 
-    const sessionsCollection = db.collection(
-      Deno.env.get("SESSIONS_COLLECTION") as string,
-    );
+    console.log(`Successfully created all indexes in database: ${dbName}`);
+  } catch (error: unknown) {
+    // Proper error handling with type checking
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "An unknown error occurred";
 
-    await sessionsCollection.createIndexes(sessionIndexes);
-
-    console.log(`Successfully creatd all indexes in database: ${dbName}`);
-  } catch (error) {
-    console.error(`Error setting up indexes: ${error.message}`);
+    console.error(`Error setting up indexes: ${errorMessage}`);
     throw error;
   }
 }

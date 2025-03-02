@@ -1,14 +1,16 @@
-import { Collection, MongoClient } from "npm:mongodb";
-import { Todo } from "../models/todo.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
-import "jsr:@std/dotenv/load";
+import { Collection, MongoClient } from "mongodb";
+import { Todo } from "../models/todo";
+import { ErrorCounter, trackDbOperation } from "../utils/metrics";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export class TodoRepo {
   private collection: Collection<Todo>;
 
   constructor(db: MongoClient) {
-    const dbName = Deno.env.get("MONGO_DB") as string;
-    const collectionName = Deno.env.get("TODO_COLLECTION") as string;
+    const dbName = process.env.MONGO_DB as string;
+    const collectionName = process.env.TODO_COLLECTION as string;
     this.collection = db.db(dbName).collection(collectionName);
   }
 
