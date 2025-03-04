@@ -1,13 +1,13 @@
 import {
   Collection,
-  MongoClient,
   Filter,
   FindOptions,
+  MongoClient,
   UpdateFilter,
 } from "mongodb";
 import { Note } from "../models/note.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
-import "jsr:@std/dotenv/load";
+import "@std/dotenv/load";
 
 export class NoteRepo {
   private collection: Collection<Note>;
@@ -298,7 +298,7 @@ export class NoteRepo {
         .toArray();
 
       return highestPinnedNote.length > 0 &&
-        highestPinnedNote[0].pinnedPosition !== undefined
+          highestPinnedNote[0].pinnedPosition !== undefined
         ? highestPinnedNote[0].pinnedPosition
         : 0;
     } catch (error) {

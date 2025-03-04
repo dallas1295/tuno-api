@@ -1,6 +1,6 @@
-import { createClient } from "npm:redis";
-import type { RedisClientType } from "npm:redis";
-import "jsr:@std/dotenv/load";
+import { createClient } from "redis";
+import type { RedisClientType } from "redis";
+import "@std/dotenv/load";
 
 const redisUrl = Deno.env.get("REDIS_URL");
 if (!redisUrl) {
@@ -11,8 +11,9 @@ const client = createClient({
   url: redisUrl,
 }) as RedisClientType;
 
-client.on("error", (error: Error) =>
-  console.log(`Redis client error ${error.message}`),
+client.on(
+  "error",
+  (error: Error) => console.log(`Redis client error ${error.message}`),
 );
 
 class RedisManager {

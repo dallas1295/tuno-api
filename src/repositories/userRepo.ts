@@ -4,10 +4,10 @@
  * retrieving, updating, and deleting user accounts.
  */
 
-import { Collection, MongoClient } from "npm:mongodb";
+import { Collection, MongoClient } from "mongodb";
 import { User } from "../models/user.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
-import "jsr:@std/dotenv/load";
+import "@std/dotenv/load";
 
 /**
  * Provides methods for managing user data in the MongoDB database.

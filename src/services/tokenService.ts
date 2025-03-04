@@ -1,6 +1,7 @@
-import { JWTPayload, jwtVerify, SignJWT } from "jsr:@panva/jose";
+import { JWTPayload, jwtVerify, SignJWT } from "@panva/jose";
 import { redisService } from "./redisService.ts";
-import "jsr:@std/dotenv/load";
+import "@std/dotenv/load";
+
 const jwtSecret = Deno.env.get("JWT_SECRET_KEY");
 if (!jwtSecret) {
   throw new Error("JWT_SECRET_KEY is not provided");

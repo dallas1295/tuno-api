@@ -1,4 +1,4 @@
-import { Context } from "jsr:@oak/oak";
+import { Context } from "@oak/oak";
 
 export function createContext(timeout: number) {
   const controller = new AbortController();

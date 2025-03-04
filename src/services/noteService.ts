@@ -1,7 +1,8 @@
 import { Note } from "../models/note.ts";
 import { NoteRepo } from "../repositories/noteRepo.ts";
-import { trackDbOperation, ErrorCounter } from "../utils/metrics.ts";
-import { MongoClient, UpdateFilter } from "npm:mongodb";
+import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { MongoClient, UpdateFilter } from "mongodb";
+import "@std/dotenv/load";
 
 const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
 const noteRepo = new NoteRepo(dbClient);
@@ -201,8 +202,9 @@ export async function togglePin(userId: string, noteId: string): Promise<void> {
         },
       };
     } else {
-      const highestPinnedPosition =
-        await noteRepo.findHighestPinnedPosition(userId);
+      const highestPinnedPosition = await noteRepo.findHighestPinnedPosition(
+        userId,
+      );
       const newPinnedPosition = highestPinnedPosition + 1;
 
       update = {

@@ -1,7 +1,5 @@
 import { Db, IndexDescription } from "mongodb";
-import dotenv from "dotenv";
-
-dotenv.config();
+import "@std/dotenv/load";
 
 const noteIndexes: IndexDescription[] = [
   {
@@ -71,7 +69,7 @@ export async function setupIndexes(db: Db): Promise<void> {
     throw new Error("Database instance is nil");
   }
 
-  const dbName = process.env["MONGO_DB"];
+  const dbName = Deno.env.get("MONGO_DB");
   if (!dbName) {
     throw new Error("MONGO_DB environment variable is not set");
   }
@@ -80,10 +78,9 @@ export async function setupIndexes(db: Db): Promise<void> {
 
   try {
     const collections = [
-      process.env["NOTE_COLLECTION"],
-      process.env["TODO_COLLECTION"],
-      process.env["USER_COLLECTION"],
-      process.env["SESSION_COLLECTION"],
+      Deno.env.get("NOTE_COLLECTION"),
+      Deno.env.get("TODO_COLLECTION"),
+      Deno.env.get("USER_COLLECTION"),
     ].filter((name): name is string => !!name);
 
     for (const collName of collections) {
@@ -103,9 +100,9 @@ export async function setupIndexes(db: Db): Promise<void> {
       }
     }
 
-    const noteCollection = process.env["NOTE_COLLECTION"];
-    const todoCollection = process.env["TODO_COLLECTION"];
-    const userCollection = process.env["USER_COLLECTION"];
+    const noteCollection = Deno.env.get("NOTE_COLLECTION");
+    const todoCollection = Deno.env.get("TODO_COLLECTION");
+    const userCollection = Deno.env.get("USER_COLLECTION");
 
     if (!noteCollection || !todoCollection || !userCollection) {
       throw new Error(
