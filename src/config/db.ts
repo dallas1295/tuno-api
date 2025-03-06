@@ -1,10 +1,10 @@
 import {
   MongoClient,
   MongoClientOptions,
-  MongoServerError,
   MongoNotConnectedError,
-} from "npm:mongodb";
-import "jsr:@std/dotenv/load";
+  MongoServerError,
+} from "mongodb";
+import "@std/dotenv/load";
 
 export interface DbConfig {
   uri: string;
@@ -15,11 +15,13 @@ export interface DbConfig {
 }
 
 export const dbConfig: DbConfig = {
-  uri: `mongodb://${Deno.env.get("MONGO_USERNAME")}:${Deno.env.get("MONGO_PASSWORD") as string}@localhost:27017/?authSource=admin`,
+  uri: `mongodb://${Deno.env.get("MONGO_USERNAME")}:${Deno.env.get(
+    "MONGO_PASSWORD",
+  ) as string}@localhost:27017/?authSource=admin`,
   maxPoolSize: parseInt(Deno.env.get("MONGO_MAX_POOL_SIZE") as string),
   minPoolSize: parseInt(Deno.env.get("MONGO_MIN_POOL_SIZE") as string),
-  maxIdleTimeMS:
-    parseInt(Deno.env.get("MONGO_MAX_CONN_IDLE_TIME") as string) * 1000,
+  maxIdleTimeMS: parseInt(Deno.env.get("MONGO_MAX_CONN_IDLE_TIME") as string) *
+    1000,
   dbName: Deno.env.get("MONGO_DB") as string,
 };
 
