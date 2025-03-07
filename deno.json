@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --allow-read --allow-env --allow-net --watch main.ts"
+    "dev": "deno run --allow-read --allow-env --allow-net --watch main.ts",
     "test": "deno test --allow-read --allow-sys --allow-env --allow-net"
   },
   "imports": {
@@ -19,12 +19,11 @@
     "redis": "npm:redis@^4.7.0"
   },
   "compilerOptions": {
-    "strict": true,
+    "strict": true
   },
   "test": {
     "include": ["tests/", "**/*_test.ts"],
     "exclude": ["node_modules/", "dist/"]
   },
-  "nodeModulesDir": "auto" 
+  "nodeModulesDir": "auto"
 }
-
