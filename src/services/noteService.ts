@@ -1,4 +1,4 @@
-import { Note } from "../models/note.ts";
+import { Note } from "../models/noteModel.ts";
 import { NoteRepo } from "../repositories/noteRepo.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import { MongoClient, UpdateFilter } from "mongodb";
@@ -21,11 +21,11 @@ interface NoteSearchOptions {
 //helper
 export function isNoteValid(note: Note): boolean {
   const noteName = note.noteName?.trim() ?? "";
-  if (!noteName) false;
+  if (!noteName) return false;
   if (noteName.length < 1 || noteName.length > 100) false;
 
   const content = note.content?.trim() ?? "";
-  if (!content) false;
+  if (!content) return false;
   if (content.length < 1) {
     console.warn("no content");
     return false;
@@ -371,7 +371,7 @@ export async function togglePin(userId: string, noteId: string): Promise<void> {
   }
 }
 
-async function updatePinPosition(
+export async function updatePinPosition(
   userId: string,
   noteId: string,
   newPos: number,
@@ -391,4 +391,36 @@ async function updatePinPosition(
   }
 
   return await noteRepo.updateNotePinPosition(userId, noteId, newPos);
+}
+
+export async function getNoteTags(
+  userId: string,
+): Promise<{ tag: string; count: number }[]> {
+  const timer = trackDbOperation("get_tags", "note");
+
+  try {
+    if (!userId || userId === "") {
+      throw new Error("User ID is required");
+    }
+
+    const tags = await noteRepo.getAllTags(userId);
+
+    const tagsWithCount = await Promise.all(
+      tags.map(async (tag) => {
+        const count = await noteRepo.countNotesByTag(userId, tag);
+        return { tag, count };
+      }),
+    );
+
+    return tagsWithCount;
+  } catch (error) {
+    ErrorCounter.inc({
+      type: "service",
+      operation: "get_note_tags_failed",
+    });
+    console.error("failed to get note tags", error);
+    throw error;
+  } finally {
+    timer.observeDuration();
+  }
 }

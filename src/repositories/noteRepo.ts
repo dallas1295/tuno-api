@@ -5,7 +5,7 @@ import {
   MongoClient,
   UpdateFilter,
 } from "mongodb";
-import { Note } from "../models/note.ts";
+import { Note } from "../models/noteModel.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
@@ -407,7 +407,7 @@ export class NoteRepo {
         await this.collection.updateMany(
           {
             userId,
-            isPined: true,
+            isPinned: true,
             pinnedPosition: { $gt: currentPos, $lte: newPos },
           },
           { $inc: { pinnedPosition: -1 } },
