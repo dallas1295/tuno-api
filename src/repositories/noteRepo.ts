@@ -202,7 +202,11 @@ export class NoteRepo {
     }
   }
 
-  async archiveNote(userId: string, noteId: string): Promise<void> {
+  async archiveNoteStatus(
+    userId: string,
+    noteId: string,
+    status: boolean,
+  ): Promise<void> {
     const timer = trackDbOperation("archive", "note");
 
     try {
@@ -212,7 +216,7 @@ export class NoteRepo {
       };
       const update = {
         $set: {
-          isArchived: true,
+          isArchived: status,
           updatedAt: new Date(),
         },
       };
@@ -229,9 +233,9 @@ export class NoteRepo {
     } catch (error) {
       ErrorCounter.inc({
         type: "database",
-        operation: "archive_note_failed",
+        operation: "update_archive_note_failed",
       });
-      console.log("Failed to archive note");
+      console.log("Failed to change note archived status ");
       throw error;
     } finally {
       timer.observeDuration();
@@ -384,6 +388,57 @@ export class NoteRepo {
     }
   }
 
+  async updateNotePinPosition(
+    userId: string,
+    noteId: string,
+    newPos: number,
+  ): Promise<void> {
+    const timer = trackDbOperation("update", "note");
+
+    try {
+      const note = await this.collection.findOne({ userId, noteId });
+      if (!note || !note.isPinned) {
+        throw new Error("Note not found or not pinned");
+      }
+
+      const currentPos = note.pinnedPosition || 0;
+
+      if (currentPos < newPos) {
+        await this.collection.updateMany(
+          {
+            userId,
+            isPined: true,
+            pinnedPosition: { $gt: currentPos, $lte: newPos },
+          },
+          { $inc: { pinnedPosition: -1 } },
+        );
+      } else if (currentPos > newPos) {
+        await this.collection.updateMany(
+          {
+            userId,
+            isPinned: true,
+            pinnedPosition: { $gt: currentPos, $lte: newPos },
+          },
+          { $inc: { pinnedPosition: 1 } },
+        );
+      }
+
+      await this.collection.updateOne(
+        { userId, noteId },
+        { $set: { pinnedPosition: newPos, updatedAt: new Date() } },
+      );
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "update_pin_pos_failed",
+      });
+      console.log("Failed to update note pin position");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
   async countNotesByTag(userId: string, tag: string): Promise<number> {
     const timer = trackDbOperation("count", "note");
 
@@ -425,6 +480,74 @@ export class NoteRepo {
         operation: "get_search_suggestions_failed",
       });
       console.log("Failed to get search suggestions");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async getPaginatedNotes(
+    userId: string,
+    page = 1,
+    pageSize = 15,
+    sortField = "createdAt",
+    sortOrder: 1 | -1 = -1,
+  ): Promise<{ notes: Note[]; totalCount: number }> {
+    const timer = trackDbOperation("find_paginated", "note");
+
+    try {
+      const filter: Filter<Note> = { userId, isArchived: false };
+      const totalCount = await this.collection.countDocuments(filter);
+
+      const options: FindOptions<Note> = {
+        sort: { [sortField]: sortOrder },
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
+      };
+
+      const notes = await this.collection.find(filter, options).toArray();
+
+      return { notes, totalCount };
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "get_paginated_notes_failed",
+      });
+      console.error("Failed to get paginated notes", error);
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async getPaginatedArchivedNotes(
+    userId: string,
+    page = 1,
+    pageSize = 15,
+    sortField = "createdAt",
+    sortOrder: 1 | -1 = -1,
+  ): Promise<{ notes: Note[]; totalCount: number }> {
+    const timer = trackDbOperation("find_paginated", "archived_note");
+
+    try {
+      const filter: Filter<Note> = { userId, isArchived: true };
+      const totalCount = await this.collection.countDocuments(filter);
+
+      const options: FindOptions<Note> = {
+        sort: { [sortField]: sortOrder },
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
+      };
+
+      const notes = await this.collection.find(filter, options).toArray();
+
+      return { notes, totalCount };
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "get_paginated_archived_notes_failed",
+      });
+      console.error("Failed to get paginated archived notes", error);
       throw error;
     } finally {
       timer.observeDuration();

@@ -18,6 +18,68 @@ interface NoteSearchOptions {
   pageSize?: number;
   query?: string;
 }
+//helper
+export function isNoteValid(note: Note): boolean {
+  const noteName = note.noteName?.trim() ?? "";
+  if (!noteName) false;
+  if (noteName.length < 1 || noteName.length > 100) false;
+
+  const content = note.content?.trim() ?? "";
+  if (!content) false;
+  if (content.length < 1) {
+    console.warn("no content");
+    return false;
+  }
+  if (content.length > 10000) {
+    console.warn("content too long");
+    return false;
+  }
+
+  if (note.tags?.length) {
+    const normalizedTags: string[] = note.tags
+      .filter((tag): tag is string => tag !== undefined)
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== "");
+
+    note.tags = normalizedTags;
+
+    if (normalizedTags.length > 10) {
+      console.warn("too many tags");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function sortNotes(
+  notes: Note[],
+  sortBy: string,
+  sortOrder: "asc" | "desc",
+): Promise<Note[]> {
+  if (!sortBy) {
+    sortBy = "createdAt";
+  }
+  const sortedNotes = [...notes].sort((a: Note, b: Note) => {
+    const aVal = a[sortBy as keyof Note];
+    const bVal = b[sortBy as keyof Note];
+    if (
+      aVal === undefined ||
+      bVal === undefined ||
+      (aVal === undefined && bVal === undefined)
+    ) {
+      return 0;
+    }
+    if (sortOrder === "asc") {
+      return aVal > bVal ? 1 : -1;
+    } else {
+      return aVal < bVal ? 1 : -1;
+    }
+  });
+  return Promise.resolve(sortedNotes);
+}
+
+// business logic
 
 export async function createNote(
   userId: string,
@@ -65,64 +127,141 @@ export async function createNote(
   }
 }
 
-export function sortNotes(
-  notes: Note[],
-  sortBy: string,
-  sortOrder: "asc" | "desc",
-): Promise<Note[]> {
-  if (!sortBy) {
-    sortBy = "createdAt";
+export async function updateNote(
+  userId: string,
+  noteId: string,
+  updates: Partial<Note>,
+): Promise<Note> {
+  const exists = await noteRepo.getNote(userId, noteId);
+  if (!exists) {
+    throw new Error("Note does not exist");
   }
-  const sortedNotes = [...notes].sort((a: Note, b: Note) => {
-    const aVal = a[sortBy as keyof Note];
-    const bVal = b[sortBy as keyof Note];
-    if (
-      aVal === undefined ||
-      bVal === undefined ||
-      (aVal === undefined && bVal === undefined)
-    ) {
-      return 0;
-    }
-    if (sortOrder === "asc") {
-      return aVal > bVal ? 1 : -1;
-    } else {
-      return aVal < bVal ? 1 : -1;
-    }
-  });
-  return Promise.resolve(sortedNotes);
+
+  const updatedNote: Note = {
+    ...exists,
+    ...updates,
+    updatedAt: new Date(),
+  };
+
+  updatedNote.noteId = exists.noteId;
+  updatedNote.userId = exists.userId;
+  updatedNote.createdAt = exists.createdAt;
+  updatedNote.isArchived = exists.isArchived ?? false;
+  updatedNote.pinnedPosition = updatedNote.pinnedPosition ??
+    exists.pinnedPosition ?? 0;
+  updatedNote.isPinned = typeof updatedNote.isPinned === "boolean"
+    ? updatedNote.isPinned
+    : (exists.isPinned ?? false);
+  if (!isNoteValid(updatedNote)) {
+    throw new Error("One or more update can't be done");
+  }
+
+  await noteRepo.updateNote(userId, noteId, updatedNote);
+
+  return updatedNote;
 }
 
-export function isNoteValid(note: Note): boolean {
-  const noteName = note.noteName?.trim() ?? "";
-  if (!noteName) false;
-  if (noteName.length < 1 || noteName.length > 100) false;
-
-  const content = note.content?.trim() ?? "";
-  if (!content) false;
-  if (content.length < 1) {
-    console.warn("no content");
-    return false;
+export async function deleteNote(
+  userId: string,
+  noteId: string,
+): Promise<void> {
+  const exists = await noteRepo.getNote(userId, noteId);
+  if (!exists) {
+    throw new Error("Note does not exist");
+  } else if (exists.isPinned) {
+    throw new Error("Cannot delete pinned notes, unpin first please");
   }
-  if (content.length > 10000) {
-    console.warn("content too long");
-    return false;
+  await noteRepo.deleteNote(userId, noteId);
+}
+
+export async function archiveNote(
+  userId: string,
+  noteId: string,
+): Promise<boolean> {
+  const note = await noteRepo.getNote(userId, noteId);
+  if (!note) {
+    throw new Error("Note does not exist");
   }
 
-  if (note.tags?.length) {
-    const normalizedTags: string[] = note.tags
-      .filter((tag): tag is string => tag !== undefined)
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== "");
+  const newArchivedStatus = !note.isArchived;
 
-    note.tags = normalizedTags;
+  await noteRepo.archiveNoteStatus(userId, noteId, newArchivedStatus);
 
-    if (normalizedTags.length > 10) {
-      console.warn("too many tags");
-      return false;
+  return newArchivedStatus;
+}
+
+export async function fetchUserNotes(
+  userId: string,
+  page = 1,
+  pageSize = 15,
+  sortField = "createdAt",
+  sortOrder: "asc" | "desc" = "desc",
+): Promise<{ notes: Note[]; totalCount: number }> {
+  const timer = trackDbOperation("fetch_user_notes", "note");
+
+  try {
+    if (!userId) {
+      throw new Error("User ID is required");
     }
-  }
 
-  return true;
+    const sortOrderValue = sortOrder === "asc" ? 1 : -1;
+
+    const result = await noteRepo.getPaginatedNotes(
+      userId,
+      page,
+      pageSize,
+      sortField,
+      sortOrderValue,
+    );
+
+    return result;
+  } catch (error) {
+    ErrorCounter.inc({
+      type: "service",
+      operation: "fetch_user_notes_failed",
+    });
+    console.error("Failed to fetch user notes", error);
+    throw error;
+  } finally {
+    timer.observeDuration();
+  }
+}
+
+export async function fetchArchivedNotes(
+  userId: string,
+  page = 1,
+  pageSize = 15,
+  sortField = "createdAt",
+  sortOrder: "asc" | "desc" = "desc",
+): Promise<{ notes: Note[]; totalCount: number }> {
+  const timer = trackDbOperation("fetch_archived_notes", "note");
+
+  try {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    const sortOrderValue = sortOrder === "asc" ? 1 : -1;
+
+    const result = await noteRepo.getPaginatedArchivedNotes(
+      userId,
+      page,
+      pageSize,
+      sortField,
+      sortOrderValue,
+    );
+
+    return result;
+  } catch (error) {
+    ErrorCounter.inc({
+      type: "service",
+      operation: "fetch_archived_notes_failed",
+    });
+    console.error("Failed to fetch archived notes", error);
+    throw error;
+  } finally {
+    timer.observeDuration();
+  }
 }
 
 export async function searchNotes(
@@ -230,4 +369,26 @@ export async function togglePin(userId: string, noteId: string): Promise<void> {
   } finally {
     timer.observeDuration();
   }
+}
+
+async function updatePinPosition(
+  userId: string,
+  noteId: string,
+  newPos: number,
+): Promise<void> {
+  const exists = await noteRepo.getNote(userId, noteId);
+  if (!exists) {
+    throw new Error("There is no note");
+  } else if (!exists.isPinned) {
+    throw new Error("Note is not pinned");
+  }
+
+  const pinnedNotes = await noteRepo.getPinnedNotes(userId);
+  const pinnedNotesCount = pinnedNotes ? pinnedNotes.length : 0;
+
+  if (newPos < 1 || newPos > pinnedNotesCount) {
+    throw new Error("Invalid position");
+  }
+
+  return await noteRepo.updateNotePinPosition(userId, noteId, newPos);
 }
