@@ -1,45 +1,17 @@
-/**
- * @file Defines the `UserRepository` class, responsible for interacting with the
- * user collection in the MongoDB database. This class provides methods for creating,
- * retrieving, updating, and deleting user accounts.
- */
-
 import { Collection, MongoClient } from "mongodb";
-import { User } from "../models/user.ts";
+import { User } from "../models/userModel.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
-/**
- * Provides methods for managing user data in the MongoDB database.
- */
 export class UserRepo {
-  /**
-   * The MongoDB collection for storing user documents.
-   * @private
-   */
   private collection: Collection<User>;
 
-  /**
-   * Constructs a new UserRepository instance.
-   *
-   * @param db A MongoClient instance connected to the MongoDB database.
-   */
   constructor(db: MongoClient) {
     const dbName = Deno.env.get("MONGO_DB") as string;
     const collectionName = Deno.env.get("USER_COLLECTION") as string;
     this.collection = db.db(dbName).collection(collectionName);
   }
 
-  /**
-   * Creates a new user account in the database.
-   *
-   * @param user The user object to create.  The `userId` property will be automatically
-   *        generated and added to the user object after insertion.  The `username`
-   *        property is required.
-   * @returns A Promise that resolves to the created user object, including the
-   *          automatically generated `userId`.
-   * @throws If the username is missing or empty, or if there's a database error.
-   */
   async createUser(user: User): Promise<User> {
     const timer = trackDbOperation("insert", "users");
     try {
@@ -65,23 +37,13 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Finds a user by their username.
-   *
-   * @param username The username to search for.
-   * @returns A Promise that resolves to the user object if found, or `null` if not found.
-   * @throws If there's a database error.
-   */
   async findByUsername(username: string): Promise<User | null> {
     const timer = trackDbOperation("find", "users");
-
     try {
       const user = await this.collection.findOne({ username });
-
       if (!user) {
         return null;
       }
-
       return user;
     } catch (error) {
       ErrorCounter.inc({
@@ -95,18 +57,10 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Finds a user by their user ID.
-   *
-   * @param userId The ID of the user to search for.
-   * @returns A Promise that resolves to the user object if found, or `null` if not found.
-   * @throws If there's a database error.
-   */
   async findById(userId: string): Promise<User | null> {
     const timer = trackDbOperation("find", "users");
     try {
       console.log(`Finding user with id: ${userId}`);
-
       const user = await this.collection.findOne(
         { userId: userId },
         {
@@ -124,12 +78,10 @@ export class UserRepo {
           },
         },
       );
-
       if (!user) {
         console.log("User cannot be found (incorrect userId)");
         return null;
       }
-
       return user;
     } catch (error) {
       ErrorCounter.inc({
@@ -143,20 +95,11 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Updates a user's password.
-   *
-   * @param userId The ID of the user to update.
-   * @param passwordHash The new, hashed password.
-   * @returns A Promise that resolves to the number of documents modified (0 or 1).
-   * @throws If the passwordHash is missing or if there's a database error.
-   */
   async updateUserPassword(
     userId: string,
     passwordHash: string,
   ): Promise<number> {
     const timer = trackDbOperation("update", "users");
-
     try {
       if (!passwordHash) {
         ErrorCounter.inc({
@@ -165,7 +108,6 @@ export class UserRepo {
         });
         throw new Error("Password hashing error");
       }
-
       const result = await this.collection.updateOne(
         { userId },
         {
@@ -175,7 +117,6 @@ export class UserRepo {
           },
         },
       );
-
       return result.modifiedCount;
     } catch (error) {
       ErrorCounter.inc({
@@ -189,17 +130,8 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Updates a user's username by their user ID.
-   *
-   * @param userId The ID of the user to update.
-   * @param updateData The user object containing the new username.
-   * @returns A Promise that resolves to the number of documents modified (0 or 1).
-   * @throws If there's a database error.
-   */
   async updateUsernameById(userId: string, updateData: User): Promise<number> {
     const timer = trackDbOperation("update", "users");
-
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -209,7 +141,6 @@ export class UserRepo {
           },
         },
       );
-
       return result.modifiedCount;
     } catch (error) {
       ErrorCounter.inc({
@@ -223,13 +154,6 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Deletes a user account by their user ID.
-   *
-   * @param userId The ID of the user to delete.
-   * @returns A Promise that resolves to the number of documents deleted (0 or 1).
-   * @throws If the user ID is missing, or if there's a database error.
-   */
   async deleteUserById(userId: string): Promise<void> {
     const timer = trackDbOperation("delete", "users");
     if (!userId) {
@@ -243,7 +167,6 @@ export class UserRepo {
     }
     try {
       const result = await this.collection.deleteOne({ userId });
-
       if (result.deletedCount === 0) {
         ErrorCounter.inc({
           type: "database",
@@ -262,14 +185,6 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Updates a user's email address.
-   *
-   * @param userId The ID of the user to update.
-   * @param email The new email address.
-   * @returns A Promise that resolves to the number of documents modified (0 or 1).
-   * @throws If there's a database error.
-   */
   async updateUserEmail(userId: string, email: string): Promise<number> {
     const timer = trackDbOperation("update", "users");
     try {
@@ -295,21 +210,12 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Enables two-factor authentication for a user.
-   *
-   * @param userId The ID of the user to update.
-   * @param secret The two-factor authentication secret.
-   * @param recoveryCodes An array of recovery codes.
-   * @throws If the user is not found or if there's a database error.
-   */
   async enableTwoFactor(
     userId: string,
     secret: string,
     recoveryCodes: string[],
   ): Promise<void> {
     const timer = trackDbOperation("update", "users");
-
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -321,7 +227,6 @@ export class UserRepo {
           },
         },
       );
-
       if (result.matchedCount === 0) {
         ErrorCounter.inc({
           type: "database",
@@ -341,15 +246,8 @@ export class UserRepo {
     }
   }
 
-  /**
-   * Disables two-factor authentication for a user.
-   *
-   * @param userId The ID of the user to update.
-   * @throws If the user is not found or if there's a database error.
-   */
   async disableTwoFactor(userId: string): Promise<void> {
     const timer = trackDbOperation("update", "users");
-
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -363,7 +261,6 @@ export class UserRepo {
           },
         },
       );
-
       if (result.matchedCount === 0) {
         ErrorCounter.inc({
           type: "database",
