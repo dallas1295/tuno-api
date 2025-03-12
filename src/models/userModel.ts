@@ -35,19 +35,12 @@ export interface User {
   /**
    * The date and time when the user last changed their email address.
    */
-  lastEmailChange: Date;
+  lastEmailChange?: Date;
 
   /**
    * The date and time when the user last changed their password.
    */
-  lastPasswordChange: Date;
-
-  /**
-   * A boolean value indicating whether the user account is currently active.
-   * An inactive account may be suspended or disabled.
-   */
-  isActive: boolean;
-
+  lastPasswordChange?: Date;
   /**
    * An optional secret key used for two-factor authentication.
    */
@@ -104,5 +97,5 @@ export interface UserProfile {
   /**
    * The date and time when the user account was created.
    */
-  created_at: Date;
+  createdAt: Date;
 }
