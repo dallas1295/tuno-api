@@ -1,4 +1,4 @@
-import * as argon2 from "argon2";
+import * as argon2 from "jsr:@felix/argon2";
 import { validatePassword } from "../utils/password.ts";
 
 const passwordConfig = {
@@ -16,24 +16,38 @@ export async function hashPassword(password: string): Promise<string> {
 
   try {
     const hash = await argon2.hash(password, {
-      type: argon2.argon2id,
       memoryCost: passwordConfig.memory,
       timeCost: passwordConfig.iterations,
-      parallelism: passwordConfig.keyLength,
+      hashLength: passwordConfig.keyLength,
     });
     return hash;
   } catch (error: unknown) {
-    throw new Error(`Error hashing password: ${error instanceof Error}`);
+    throw new Error(
+      `Error hashing password: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
   }
 }
 
 export async function verifyPassword(
+  storedHash: string,
   providedPassword: string,
-  storedPassword: string,
 ): Promise<boolean> {
   try {
-    return await argon2.verify(storedPassword, providedPassword);
+    return await argon2.verify(storedHash, providedPassword);
   } catch (error) {
-    throw new Error(`Error verifying password: ${error instanceof Error}`);
+    throw new Error(
+      `Error hashing password: ${error})
+      }`,
+    );
   }
 }
+
+// Test
+
+const testHashing = await hashPassword("blubber");
+console.log(testHashing);
+
+const testVerify = await verifyPassword(testHashing, "blubber");
+console.log(testVerify);
