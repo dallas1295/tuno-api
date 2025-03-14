@@ -1,7 +1,7 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
 import { validatePassword } from "../utils/password.ts";
-import { hashPassword } from "../services/passwordService.ts";
+import { hashPassword, verifyPassword } from "../services/passwordService.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import { MongoClient } from "mongodb";
 import "@std/dotenv/load";
@@ -27,6 +27,11 @@ export class UserService {
       );
     }
     try {
+      const userNameExists = await this.userRepo.findByUsername(username);
+      if (userNameExists) {
+        throw new Error("Username already exists");
+      }
+
       const hashedPassword = await hashPassword(password);
       const newId = crypto.randomUUID();
 
@@ -50,7 +55,7 @@ export class UserService {
     }
   }
 
-  async getUserProfile(username: string): Promise<UserProfile> {
+  async getProfile(username: string): Promise<UserProfile> {
     const timer = trackDbOperation("find", "profile");
 
     try {
@@ -69,6 +74,49 @@ export class UserService {
     } catch (error) {
       ErrorCounter.inc({ type: "UserService", operation: "get_user_profile" });
       console.error("Error getting user profile");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+  async changePassword(
+    userId: string,
+    newPassword: string,
+    oldPassword: string,
+  ): Promise<void> {
+    const timer = trackDbOperation("update", "password");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      if (!await verifyPassword(exists.passwordHash, oldPassword)) {
+        throw new Error("Old password is incorrect");
+      } else if (!validatePassword(newPassword)) {
+        throw new Error(
+          "New password must have at least 2 special characters, 2 numbers, and be at least 8 characters long",
+        );
+      }
+
+      if (exists.lastPasswordChange) {
+        const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+        if (Date.now() - exists.lastPasswordChange.getTime() < twoWeeks) {
+          throw new Error("Password can only be changed every 2 weeks");
+        }
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+
+      await this.userRepo.updateUserPassword(
+        userId,
+        hashedPassword,
+      );
+    } catch (error) {
+      ErrorCounter.inc({ type: "UserService", operation: "change_password" });
+      console.error("Error changing password");
       throw error;
     } finally {
       timer.observeDuration();
