@@ -1,4 +1,4 @@
-import * as argon2 from "jsr:@felix/argon2";
+import * as argon2 from "@felix/argon2";
 import { validatePassword } from "../utils/password.ts";
 
 const passwordConfig = {
