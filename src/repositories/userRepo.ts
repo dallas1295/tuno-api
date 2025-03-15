@@ -130,18 +130,26 @@ export class UserRepo {
     }
   }
 
-  async updateUsernameById(userId: string, updateData: User): Promise<number> {
+  async updateUsernameById(
+    userId: string,
+    updateData: User,
+  ): Promise<User | null> {
     const timer = trackDbOperation("update", "users");
     try {
-      const result = await this.collection.updateOne(
+      const result = await this.collection.findOneAndUpdate(
         { userId: userId },
         {
           $set: {
             username: updateData.username,
+            lastUsernameChange: new Date(),
           },
         },
+        {
+          returnDocument: "after",
+        },
       );
-      return result.modifiedCount;
+
+      return result || null;
     } catch (error) {
       ErrorCounter.inc({
         type: "database",

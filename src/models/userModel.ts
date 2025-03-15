@@ -41,6 +41,7 @@ export interface User {
    * The date and time when the user last changed their password.
    */
   lastPasswordChange?: Date;
+  lastUsernameChange?: Date;
   /**
    * An optional secret key used for two-factor authentication.
    */

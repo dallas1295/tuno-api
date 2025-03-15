@@ -1,6 +1,6 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
-import { validatePassword } from "../utils/password.ts";
+import { validateEmail, validatePassword } from "../utils/validation.ts";
 import { hashPassword, verifyPassword } from "../services/passwordService.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import { MongoClient } from "mongodb";
@@ -103,8 +103,16 @@ export class UserService {
 
       if (exists.lastPasswordChange) {
         const twoWeeks = 14 * 24 * 60 * 60 * 1000;
-        if (Date.now() - exists.lastPasswordChange.getTime() < twoWeeks) {
-          throw new Error("Password can only be changed every 2 weeks");
+        const timeSinceChange = Date.now() -
+          exists.lastPasswordChange.getTime();
+        const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
+
+        if (timeRemaining > 0) {
+          throw new Error(
+            `Password can only be changed every 2 weeks. Time remaining: ${
+              Math.ceil(timeRemaining / (24 * 60 * 60 * 1000))
+            } days`,
+          );
         }
       }
 
@@ -117,6 +125,105 @@ export class UserService {
     } catch (error) {
       ErrorCounter.inc({ type: "UserService", operation: "change_password" });
       console.error("Error changing password");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+  async updateUsername(
+    userId: string,
+    oldName: string,
+    newName: string,
+  ): Promise<User | null> {
+    const timer = trackDbOperation("update", "username");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+      if (!newName || newName.trim() === "") {
+        throw new Error("Must provide new username");
+      } else if (newName.trim() === oldName.trim()) {
+        throw new Error("You are already using this username");
+      }
+
+      if (exists.lastUsernameChange) {
+        const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+        const timeSinceChange = Date.now() -
+          exists.lastUsernameChange.getTime();
+        const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
+
+        if (timeRemaining > 0) {
+          throw new Error(
+            `Username can only be changed every 2 weeks. Time remaining: ${
+              Math.ceil(timeRemaining / (24 * 60 * 60 * 1000))
+            } days`,
+          );
+        }
+      }
+
+      const nameUsed = await this.userRepo.findByUsername(newName);
+
+      if (nameUsed) {
+        throw new Error("This username is already in use");
+      }
+
+      return await this.userRepo.updateUsernameById(
+        userId,
+        { username: newName.trim() } as User,
+      );
+    } catch (error) {
+      ErrorCounter.inc({ type: "UserService", operation: "change_username" });
+      console.error("Error updating username");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+
+  async updateEmail(userId: string, newEmail: string): Promise<boolean> {
+    const timer = trackDbOperation("update", "email");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      if (exists.email.trim() === newEmail.trim()) {
+        throw new Error("You are already using this email");
+      }
+
+      if (exists.lastEmailChange) {
+        const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+        const timeSinceChange = Date.now() -
+          exists.lastEmailChange.getTime();
+        const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
+
+        if (timeRemaining > 0) {
+          throw new Error(
+            `Email can only be changed every 2 weeks. Time remaining: ${
+              Math.ceil(timeRemaining / (24 * 60 * 60 * 1000))
+            } days`,
+          );
+        }
+      }
+
+      if (!validateEmail(newEmail)) {
+        throw new Error("Must be a valid email addresss");
+      }
+
+      const result = await this.userRepo.updateUserEmail(userId, newEmail);
+
+      if (!result) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      ErrorCounter.inc({ type: "UserService", operation: "change_email" });
+      console.error("Error updating email");
       throw error;
     } finally {
       timer.observeDuration();
