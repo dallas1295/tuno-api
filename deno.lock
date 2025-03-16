@@ -4,8 +4,10 @@
     "jsr:@denosaurs/plug@^1.0.6": "1.0.6",
     "jsr:@felix/argon2@*": "2.0.2",
     "jsr:@felix/argon2@^2.0.2": "2.0.2",
+    "jsr:@hectorm/otpauth@^9.3.6": "9.3.6",
     "jsr:@oak/commons@1": "1.0.0",
     "jsr:@oak/oak@^17.1.4": "17.1.4",
+    "jsr:@openjs/denoqr@1": "1.0.0",
     "jsr:@panva/jose@^6.0.8": "6.0.8",
     "jsr:@std/assert@0.221": "0.221.0",
     "jsr:@std/assert@1": "1.0.11",
@@ -51,6 +53,9 @@
         "jsr:@denosaurs/plug"
       ]
     },
+    "@hectorm/otpauth@9.3.6": {
+      "integrity": "a1b88bdee6a7b4e208954d58b8c69561711f2e43b2f7ff4e07202e4a4c06219c"
+    },
     "@oak/commons@1.0.0": {
       "integrity": "49805b55603c3627a9d6235c0655aa2b6222d3036b3a13ff0380c16368f607ac",
       "dependencies": [
@@ -73,6 +78,9 @@
         "jsr:@std/path@1",
         "npm:path-to-regexp"
       ]
+    },
+    "@openjs/denoqr@1.0.0": {
+      "integrity": "3ae93a5b672ec987363542e120257d661d5ed9536f16c08303972686ae787c27"
     },
     "@panva/jose@6.0.8": {
       "integrity": "b60b3d2803965ef62fae00d302730068f6c7fd0167ae427965593db9dfe6e8f0"
@@ -300,7 +308,9 @@
   "workspace": {
     "dependencies": [
       "jsr:@felix/argon2@^2.0.2",
+      "jsr:@hectorm/otpauth@^9.3.6",
       "jsr:@oak/oak@^17.1.4",
+      "jsr:@openjs/denoqr@1",
       "jsr:@panva/jose@^6.0.8",
       "jsr:@std/assert@^1.0.11",
       "jsr:@std/dotenv@~0.225.3",

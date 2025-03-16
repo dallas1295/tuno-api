@@ -1,4 +1,4 @@
-import { User } from "../models/user.ts";
+import { User } from "../models/userModel.ts";
 
 interface UserLink {
   href: string;

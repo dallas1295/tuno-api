@@ -1,9 +1,13 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
 import { validateEmail, validatePassword } from "../utils/validation.ts";
-import { hashPassword, verifyPassword } from "../services/passwordService.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { generateRecoveryCodes } from "../utils/recovery.ts";
+import { verifyTOTP } from "../utils/totp.ts";
+import { hashPassword, verifyPassword } from "../services/passwordService.ts";
 import { MongoClient } from "mongodb";
+import * as OTPAuth from "@hectorm/otpauth";
+import * as denoqr from "@openjs/denoqr";
 import "@std/dotenv/load";
 
 export class UserService {
@@ -224,6 +228,89 @@ export class UserService {
     } catch (error) {
       ErrorCounter.inc({ type: "UserService", operation: "change_email" });
       console.error("Error updating email");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+  async enableTwoFactor(
+    userId: string,
+  ): Promise<{ enabled: boolean; qrCode: string; uri: string }> {
+    const timer = trackDbOperation("enable", "two_factor");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+
+      if (!exists) {
+        throw new Error("User not found");
+      } else if (exists.twoFactorEnabled) {
+        throw new Error("Two factor is already enabled");
+      }
+
+      const secret = new OTPAuth.Secret({ size: 32 });
+      const totp = new OTPAuth.TOTP({
+        issuer: "toNotes",
+        label: "toNotesAuth",
+        algorith: "SHA512",
+        digits: 6,
+        period: 30,
+        secret: secret,
+      });
+
+      const recovery = generateRecoveryCodes();
+      const uri = OTPAuth.URI.stringify(totp);
+      const qrSvg = denoqr.renderToSvg(denoqr.encodeText(uri));
+
+      await this.userRepo.enableTwoFactor(userId, secret, recovery);
+
+      return { enabled: true, qrCode: qrSvg, uri: uri };
+    } catch (error) {
+      ErrorCounter.inc({ type: "UserService", operation: "enable_two_factor" });
+      console.error("Error enabling two factor");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+  async disableTwoFactor(
+    userId: string,
+    totp: string,
+    password: string,
+  ): Promise<boolean> {
+    const timer = trackDbOperation("disable", "two_factor");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      if (exists.twoFactorEnabled === false) {
+        throw new Error("Two factor cannot be disable (not enabled)");
+      }
+
+      const isPasswordValid = await verifyPassword(
+        exists.passwordHash,
+        password,
+      );
+      if (!isPasswordValid) {
+        throw new Error("Invalid password");
+      }
+
+      const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
+      if (!verifiedTotp) {
+        throw new Error("Two Factor not verified");
+      }
+
+      await this.userRepo.disableTwoFactor(userId);
+
+      return true;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "UserService",
+        operation: "disable_two_factor",
+      });
+      console.error("Error disabling two factor");
       throw error;
     } finally {
       timer.observeDuration();
