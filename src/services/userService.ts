@@ -348,7 +348,7 @@ export class UserService {
       }
       if (exists.twoFactorEnabled) {
         if (!totp) {
-          throw new Error("OTP is required when two-factor is enabled");
+          throw new Error("OTP is require when two-factor is enabled");
         }
         const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
         if (!verifiedTotp) {

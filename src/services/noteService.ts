@@ -27,7 +27,7 @@ export class NoteService {
   //helper
   isNoteValid(note: Note): boolean {
     const noteName = note.noteName?.trim() ?? "";
-    if (!noteName) return false;
+    if (!noteName) false;
     if (noteName.length < 1 || noteName.length > 100) false;
 
     const content = note.content?.trim() ?? "";
