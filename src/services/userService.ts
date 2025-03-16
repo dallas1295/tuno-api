@@ -289,17 +289,17 @@ export class UserService {
         throw new Error("Two factor cannot be disable (not enabled)");
       }
 
-      const isPasswordValid = await verifyPassword(
+      const verifiedPassword = await verifyPassword(
         exists.passwordHash,
         password,
       );
-      if (!isPasswordValid) {
+      if (!verifiedPassword) {
         throw new Error("Invalid password");
       }
 
       const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
       if (!verifiedTotp) {
-        throw new Error("Two Factor not verified");
+        throw new Error("OTP cannot be verified");
       }
 
       await this.userRepo.disableTwoFactor(userId);
@@ -311,6 +311,55 @@ export class UserService {
         operation: "disable_two_factor",
       });
       console.error("Error disabling two factor");
+      throw error;
+    } finally {
+      timer.observeDuration();
+    }
+  }
+  async deleteUser(
+    userId: string,
+    passwordOnce: string,
+    passwordTwice: string,
+    totp?: string,
+  ): Promise<void> {
+    const timer = trackDbOperation("delete", "user");
+
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      const verifiedPasswordOnce = await verifyPassword(
+        exists.passwordHash,
+        passwordOnce,
+      );
+
+      if (!verifiedPasswordOnce) {
+        throw new Error("Invalid password");
+      }
+      const verifiedPasswordTwice = await verifyPassword(
+        exists.passwordHash,
+        passwordTwice,
+      );
+
+      if (!verifiedPasswordTwice) {
+        throw new Error("Invalid password");
+      }
+      if (exists.twoFactorEnabled) {
+        if (!totp) {
+          throw new Error("OTP is required when two-factor is enabled");
+        }
+        const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
+        if (!verifiedTotp) {
+          throw new Error("OTP cannot be verified");
+        }
+      }
+
+      return await this.userRepo.deleteUserById(userId);
+    } catch (error) {
+      ErrorCounter.inc({ type: "UserService", operation: "delete_user" });
+      console.error("Error deleting user");
       throw error;
     } finally {
       timer.observeDuration();
