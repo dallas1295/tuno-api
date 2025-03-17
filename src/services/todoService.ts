@@ -1,6 +1,7 @@
 import { Todo } from "../models/todoModel.ts";
 import { TodoRepo } from "../repositories/todoRepo.ts";
-import { MongoClient, UpdateFilter } from "mongodb";
+import { validateTags } from "../utils/validation.ts";
+import { MongoClient } from "mongodb";
 import "@std/dotenv/load";
 
 export class TodoService {
@@ -17,8 +18,6 @@ export class TodoService {
     if (!todoName) false;
     if (todoName.length < 1 || todoName.length > 100) false;
 
-    const description = todo.description;
+    todo.tags = validateTags(todo.tags);
   }
-
-  // not pushing??
 }
