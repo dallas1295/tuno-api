@@ -27,13 +27,15 @@ export class TodoService {
   }
 
   async createTodo(todo: Todo): Promise<Todo> {
-    const todoName = todo.todoName.trim() ?? "";
-    if (!todoName) false;
-    if (todoName.length < 1 || todoName.length > 100) false;
+    if (!todo.userId) {
+      throw new Error("User ID is not valid");
+    }
 
-    todo.tags = validateTags(todo.tags);
-    todo.createdAt = new Date();
-    todo.updatedAt = new Date();
-    todo.todoId = crypto.randomUUID();
+    if (!todo.todoName || todo.todoName.trim() === "") {
+      throw new Error("Todo requires name");
+    }
+
+    const validatedTags = validateTags(todo.tags);
+    const validatedPriority = validatePriority(todo.priority);
   }
 }
