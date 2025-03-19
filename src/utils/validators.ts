@@ -1,3 +1,4 @@
+import { PriorityLevel } from "../models/todoModel.ts";
 export function validatePassword(password: string): Promise<boolean> {
   // Password must:
   // - Be at least 8 characters long
@@ -42,4 +43,16 @@ export function validateTags(tags?: string[]): string[] | undefined {
   }
 
   return validTags;
+}
+
+export function validatePriorityLevel(
+  priority?: PriorityLevel,
+): PriorityLevel | undefined {
+  if (!priority) return undefined;
+
+  if (Object.values(PriorityLevel).includes(priority)) {
+    return priority;
+  }
+
+  return undefined;
 }
