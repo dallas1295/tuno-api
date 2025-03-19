@@ -1,6 +1,6 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
-import { validateEmail, validatePassword } from "../utils/validation.ts";
+import { validateEmail, validatePassword } from "../utils/validators.ts";
 import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";

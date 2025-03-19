@@ -1,4 +1,5 @@
-import { PriorityLevel } from "../models/todoModel.ts";
+import { Pattern, Priority } from "../models/todoModel.ts";
+
 export function validatePassword(password: string): Promise<boolean> {
   // Password must:
   // - Be at least 8 characters long
@@ -45,13 +46,25 @@ export function validateTags(tags?: string[]): string[] | undefined {
   return validTags;
 }
 
-export function validatePriorityLevel(
-  priority?: PriorityLevel,
-): PriorityLevel | undefined {
+export function validatePriority(
+  priority?: keyof typeof Priority,
+): keyof typeof Priority | undefined {
   if (!priority) return undefined;
 
-  if (Object.values(PriorityLevel).includes(priority)) {
+  if (Object.values(Priority).includes(priority)) {
     return priority;
+  }
+
+  return undefined;
+}
+
+export function validateRecurringPattern(
+  pattern?: keyof typeof Pattern,
+): keyof typeof Pattern | undefined {
+  if (!pattern) return undefined;
+
+  if (Object.values(Pattern).includes(pattern)) {
+    return pattern;
   }
 
   return undefined;

@@ -1,15 +1,15 @@
-export enum Priority {
-  Low = "low",
-  Medium = "medium",
-  High = "high",
-}
+export const Priority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
 
-export enum Pattern {
-  Daily = "daily",
-  Weekly = "weekly",
-  Monthly = "monthly",
-  Yearly = "yearly",
-}
+export const Pattern = {
+  daily: "daily",
+  weekly: "weekly",
+  monthly: "monthly",
+  yearly: "yearly",
+} as const;
 
 export interface Todo {
   todoId: string;
@@ -20,10 +20,10 @@ export interface Todo {
   createdAt: Date;
   updatedAt: Date;
   tags?: string[];
-  priorityLevel?: Priority;
+  priority?: keyof typeof Priority;
   dueDate?: Date;
   reminderAt?: Date;
   isRecurring?: boolean;
-  pattern?: Pattern;
+  recurringPattern?: keyof typeof Pattern;
   recurrenceEnd?: Date;
 }
