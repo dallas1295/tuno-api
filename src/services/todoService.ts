@@ -5,7 +5,7 @@ import {
   validateRecurringPattern,
   validateTags,
 } from "../utils/validators.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { ErrorCounter } from "../utils/metrics.ts";
 import { MongoClient } from "mongodb";
 import "@std/dotenv/load";
 
@@ -43,14 +43,17 @@ export class TodoService {
     return true;
   }
 
+  prepTodo(todo: Todo): Todo {
+    todo.tags = validateTags(todo.tags);
+    todo.priority = validatePriority(todo.priority);
+    todo.isComplete = !!todo.isComplete;
+    return todo;
+  }
+
   // business logic
   async createTodo(todo: Todo): Promise<Todo> {
-    const timer = trackDbOperation("create", "todo");
-
     try {
-      todo.tags = validateTags(todo.tags);
-      todo.priority = validatePriority(todo.priority);
-      todo.isComplete = !!todo.isComplete;
+      this.prepTodo(todo);
 
       if (!this.isTodoValid(todo)) {
         ErrorCounter.inc({
@@ -68,8 +71,47 @@ export class TodoService {
       });
       console.log("Error creating todo");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
+  }
+
+  async updateTodo(
+    userId: string,
+    todoId: string,
+    updates: Partial<Todo>,
+  ): Promise<Todo> {
+    try {
+      const exists = await this.todoRepo.getTodoById(todoId);
+      if (!exists) {
+        throw new Error("Todo not found");
+      }
+
+      const updatedTodo = this.prepTodo({ ...exists, ...updates });
+
+      if (!this.isTodoValid(updatedTodo)) {
+        ErrorCounter.inc({
+          type: "validation",
+          operation: "udpate_todo_failed",
+        });
+        throw new Error("Invalid todo update");
+      }
+
+      await this.todoRepo.updateTodo(userId, todoId, updatedTodo);
+      return updatedTodo;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "update_todo_failed",
+      });
+      console.log("Error updating todo");
+      throw error;
+    }
+  }
+
+  async deleteTodo(userId: string, todoId: string): Promise<void> {
+    const exists = await this.todoRepo.getTodoById(todoId);
+    if (!exists) {
+      throw new Error("Todo does not exist");
+    }
+    await this.todoRepo.deleteTodo(userId, todoId);
   }
 }

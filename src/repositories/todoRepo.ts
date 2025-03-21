@@ -55,7 +55,7 @@ export class TodoRepo {
     }
   }
 
-  async getTodosById(userId: string, todoId: string): Promise<Todo | null> {
+  async getTodoById(userId: string, todoId: string): Promise<Todo | null> {
     const timer = trackDbOperation("find", "todo");
 
     try {
@@ -97,10 +97,10 @@ export class TodoRepo {
           description: updates.description,
           updatedAt: new Date(),
           tags: updates.tags,
-          priorityLevel: updates.priorityLevel,
+          priorityLevel: updates.priority,
           dueDate: updates.dueDate,
           reminderAt: updates.reminderAt,
-          recurrencePattern: updates.recurrencePattern,
+          recurrencePattern: updates.recurringPattern,
         },
       };
       const result = await this.collection.updateOne(filter, update);
