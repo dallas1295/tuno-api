@@ -55,12 +55,11 @@ export class TodoRepo {
     }
   }
 
-  async getTodoById(userId: string, todoId: string): Promise<Todo | null> {
+  async getTodoById(todoId: string): Promise<Todo | null> {
     const timer = trackDbOperation("find", "todo");
 
     try {
       const findUserTodo = this.collection.findOne({
-        userId: userId,
         todoId: todoId,
       });
 
