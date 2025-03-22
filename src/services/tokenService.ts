@@ -1,38 +1,7 @@
 import { JWTPayload, jwtVerify, SignJWT } from "@panva/jose";
 import { redisService } from "./redisService.ts";
+import { secretKey, tokenConfig, TokenPair } from "../utils/token.ts";
 import "@std/dotenv/load";
-
-const jwtSecret = Deno.env.get("JWT_SECRET_KEY");
-if (!jwtSecret) {
-  throw new Error("JWT_SECRET_KEY is not provided");
-}
-
-const secretKey = await crypto.subtle.importKey(
-  "raw",
-  new TextEncoder().encode(jwtSecret),
-  { name: "HMAC", hash: "SHA-256" },
-  false,
-  ["sign", "verify"],
-);
-interface TokenConfig {
-  accessTokenExpiry: string;
-  refreshTokenExpiry: string;
-  issuer: string;
-  audience: string;
-}
-
-const tokenConfig: TokenConfig = {
-  accessTokenExpiry: "15m", // Short-lived access token
-  refreshTokenExpiry: "7d", // Longer-lived refresh token
-  issuer: "tonotes-api",
-  audience: "tonotes-client",
-};
-
-interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
 
 export const tokenService = {
   generateTokenPair: async (payload: JWTPayload): Promise<TokenPair> => {
