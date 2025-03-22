@@ -261,6 +261,29 @@ export class TodoService {
     }
   }
 
+  async toggleComplete(userId: string, todoId: string): Promise<Todo> {
+    try {
+      const todo = await this.todoRepo.getTodoById(todoId);
+      if (!todo) {
+        throw new Error("Could not find todo");
+      }
+
+      todo.isComplete = !todo.isComplete;
+      todo.updatedAt = new Date();
+
+      await this.todoRepo.updateTodo(userId, todoId, todo);
+
+      return todo;
+    } catch (error) {
+      ErrorCounter.inc({
+        type: "database",
+        operation: "toggle_complete_failed",
+      });
+      console.log("Error toggling complete");
+      throw error;
+    }
+  }
+
   async getTodoStats(userId: string): Promise<TodoStats> {
     try {
       const todos = await this.todoRepo.getUserTodos(userId);
