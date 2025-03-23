@@ -1,7 +1,7 @@
 import * as argon2 from "@felix/argon2";
-import { validatePassword } from "../utils/password.ts";
+import { validatePassword } from "../utils/validators.ts";
 
-const passwordConfig = {
+const ARGON2_CONFIG = {
   memory: 64 * 1024,
   iterations: 3,
   keyLength: 32,
@@ -16,9 +16,9 @@ export async function hashPassword(password: string): Promise<string> {
 
   try {
     const hash = await argon2.hash(password, {
-      memoryCost: passwordConfig.memory,
-      timeCost: passwordConfig.iterations,
-      hashLength: passwordConfig.keyLength,
+      memoryCost: ARGON2_CONFIG.memory,
+      timeCost: ARGON2_CONFIG.iterations,
+      hashLength: ARGON2_CONFIG.keyLength,
     });
     return hash;
   } catch (error: unknown) {
