@@ -9,6 +9,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    networks:
+      - app-network
 
   mongodb:
     image: mongo:8.0
@@ -22,6 +24,8 @@ services:
       - mongodb_data:/data/db
     restart: unless-stopped
     command: mongod --auth
+    networks:
+      - app-network
 
   redis:
     image: redis:7-alpine
@@ -36,9 +40,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - app-network
 
 volumes:
   mongodb_data:
     driver: local
   redis_data:
     driver: local
+
+networks:
+  app-network:
+    driver: bridge
