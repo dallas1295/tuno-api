@@ -1,6 +1,6 @@
 import { Note } from "../models/noteModel.ts";
 import { NoteRepo } from "../repositories/noteRepo.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { Metrics } from "../utils/metrics.ts";
 import { MongoClient, UpdateFilter } from "mongodb";
 import "@std/dotenv/load";
 
@@ -94,8 +94,6 @@ export class NoteService {
     tags?: string[],
     isPinned = false,
   ): Promise<Note> {
-    const timer = trackDbOperation("create", "note");
-
     try {
       const noteId = crypto.randomUUID();
 
@@ -112,7 +110,7 @@ export class NoteService {
       };
 
       if (!this.isNoteValid(note)) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "validation",
           operation: "create_note_failed",
         });
@@ -122,14 +120,12 @@ export class NoteService {
       const createdNote = await this.noteRepo.createNote(note);
       return createdNote;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "create_note_failed",
       });
       console.log("Failed to create note");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
@@ -203,8 +199,6 @@ export class NoteService {
     sortField = "createdAt",
     sortOrder: "asc" | "desc" = "desc",
   ): Promise<{ notes: Note[]; totalCount: number }> {
-    const timer = trackDbOperation("fetch_user_notes", "note");
-
     try {
       if (!userId) {
         throw new Error("User ID is required");
@@ -222,14 +216,12 @@ export class NoteService {
 
       return result;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "service",
         operation: "fetch_user_notes_failed",
       });
       console.error("Failed to fetch user notes", error);
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
@@ -240,8 +232,6 @@ export class NoteService {
     sortField = "createdAt",
     sortOrder: "asc" | "desc" = "desc",
   ): Promise<{ notes: Note[]; totalCount: number }> {
-    const timer = trackDbOperation("fetch_archived_notes", "note");
-
     try {
       if (!userId) {
         throw new Error("User ID is required");
@@ -259,14 +249,12 @@ export class NoteService {
 
       return result;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "service",
         operation: "fetch_archived_notes_failed",
       });
       console.error("Failed to fetch archived notes", error);
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
@@ -299,8 +287,6 @@ export class NoteService {
   }
 
   async getPinnedNotes(userId: string): Promise<Note[]> {
-    const timer = trackDbOperation("get_pinned", "note");
-
     if (!userId || userId.trim() === "") {
       throw new Error("User ID is required");
     }
@@ -312,25 +298,21 @@ export class NoteService {
       }
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "get_pinned_failed",
       });
       console.log("Failed to get pinned notes");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
   async togglePin(userId: string, noteId: string): Promise<void> {
-    const timer = trackDbOperation("pinned", "note");
-
     try {
       const note = await this.noteRepo.getNote(userId, noteId);
 
       if (!note) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "database",
           operation: "note_not_found",
         });
@@ -369,14 +351,12 @@ export class NoteService {
         update,
       );
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "toggle_pin_failed",
       });
       console.log("Failed to toggle pin");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
@@ -405,8 +385,6 @@ export class NoteService {
   async getNoteTags(
     userId: string,
   ): Promise<{ tag: string; count: number }[]> {
-    const timer = trackDbOperation("get_tags", "note");
-
     try {
       if (!userId || userId === "") {
         throw new Error("User ID is required");
@@ -423,14 +401,12 @@ export class NoteService {
 
       return tagsWithCount;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "service",
         operation: "get_note_tags_failed",
       });
       console.error("failed to get note tags", error);
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 }

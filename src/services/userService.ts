@@ -1,7 +1,7 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
 import { validateEmail, validatePassword } from "../utils/validators.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { Metrics } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";
 import { hashPassword, verifyPassword } from "../services/passwordService.ts";
@@ -23,8 +23,6 @@ export class UserService {
     email: string,
     password: string,
   ): Promise<User> {
-    const timer = trackDbOperation("create", "user");
-
     if (!validatePassword(password)) {
       throw new Error(
         "Password must have at least 2 special characters, 2 numbers, and be at least 8 characters long",
@@ -51,17 +49,16 @@ export class UserService {
       const createdUser = await this.userRepo.createUser(user);
       return createdUser;
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "create_user" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "create_user",
+      });
       console.error("Error creating user");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
   async getProfile(username: string): Promise<UserProfile> {
-    const timer = trackDbOperation("find", "profile");
-
     try {
       const exists = await this.userRepo.findByUsername(username);
       if (!exists) {
@@ -76,11 +73,12 @@ export class UserService {
 
       return userProfile;
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "get_user_profile" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "get_user_profile",
+      });
       console.error("Error getting user profile");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
   async changePassword(
@@ -88,8 +86,6 @@ export class UserService {
     newPassword: string,
     oldPassword: string,
   ): Promise<void> {
-    const timer = trackDbOperation("update", "password");
-
     try {
       const exists = await this.userRepo.findById(userId);
 
@@ -127,11 +123,12 @@ export class UserService {
         hashedPassword,
       );
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "change_password" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "change_password",
+      });
       console.error("Error changing password");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
   async updateUsername(
@@ -139,8 +136,6 @@ export class UserService {
     oldName: string,
     newName: string,
   ): Promise<User | null> {
-    const timer = trackDbOperation("update", "username");
-
     try {
       const exists = await this.userRepo.findById(userId);
       if (!exists) {
@@ -178,17 +173,16 @@ export class UserService {
         { username: newName.trim() } as User,
       );
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "change_username" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "change_username",
+      });
       console.error("Error updating username");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 
   async updateEmail(userId: string, newEmail: string): Promise<boolean> {
-    const timer = trackDbOperation("update", "email");
-
     try {
       const exists = await this.userRepo.findById(userId);
       if (!exists) {
@@ -226,18 +220,17 @@ export class UserService {
 
       return true;
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "change_email" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "change_email",
+      });
       console.error("Error updating email");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
   async enableTwoFactor(
     userId: string,
   ): Promise<{ enabled: boolean; qrCode: string; uri: string }> {
-    const timer = trackDbOperation("enable", "two_factor");
-
     try {
       const exists = await this.userRepo.findById(userId);
 
@@ -265,11 +258,12 @@ export class UserService {
 
       return { enabled: true, qrCode: qrSvg, uri: uri };
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "enable_two_factor" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "enable_two_factor",
+      });
       console.error("Error enabling two factor");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
   async disableTwoFactor(
@@ -277,8 +271,6 @@ export class UserService {
     totp: string,
     password: string,
   ): Promise<boolean> {
-    const timer = trackDbOperation("disable", "two_factor");
-
     try {
       const exists = await this.userRepo.findById(userId);
       if (!exists) {
@@ -306,14 +298,12 @@ export class UserService {
 
       return true;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "UserService",
         operation: "disable_two_factor",
       });
       console.error("Error disabling two factor");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
   async deleteUser(
@@ -322,8 +312,6 @@ export class UserService {
     passwordTwice: string,
     totp?: string,
   ): Promise<void> {
-    const timer = trackDbOperation("delete", "user");
-
     try {
       const exists = await this.userRepo.findById(userId);
       if (!exists) {
@@ -358,11 +346,12 @@ export class UserService {
 
       return await this.userRepo.deleteUserById(userId);
     } catch (error) {
-      ErrorCounter.inc({ type: "UserService", operation: "delete_user" });
+      Metrics.db.counters.errors.add(1, {
+        type: "UserService",
+        operation: "delete_user",
+      });
       console.error("Error deleting user");
       throw error;
-    } finally {
-      timer.observeDuration();
     }
   }
 }

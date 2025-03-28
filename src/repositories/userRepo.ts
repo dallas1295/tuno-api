@@ -1,6 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { User } from "../models/userModel.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { Metrics } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
 export class UserRepo {
@@ -13,7 +13,7 @@ export class UserRepo {
   }
 
   async createUser(user: User): Promise<User> {
-    const timer = trackDbOperation("insert", "users");
+    const timer = Metrics.db.track.operation("insert", "users");
     try {
       if (!user.username || user.username.trim() === "") {
         throw new Error("Username is required");
@@ -26,7 +26,7 @@ export class UserRepo {
         userId: result.insertedId.toString(),
       };
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "create_user_failed",
       });
@@ -38,7 +38,7 @@ export class UserRepo {
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const timer = trackDbOperation("find", "users");
+    const timer = Metrics.db.track.operation("find", "users");
     try {
       const user = await this.collection.findOne({ username });
       if (!user) {
@@ -46,7 +46,7 @@ export class UserRepo {
       }
       return user;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "find_by_username_failed",
       });
@@ -58,7 +58,7 @@ export class UserRepo {
   }
 
   async findById(userId: string): Promise<User | null> {
-    const timer = trackDbOperation("find", "users");
+    const timer = Metrics.db.track.operation("find", "users");
     try {
       console.log(`Finding user with id: ${userId}`);
       const user = await this.collection.findOne(
@@ -84,7 +84,7 @@ export class UserRepo {
       }
       return user;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "find_by_id_failed",
       });
@@ -99,10 +99,10 @@ export class UserRepo {
     userId: string,
     passwordHash: string,
   ): Promise<number> {
-    const timer = trackDbOperation("update", "users");
+    const timer = Metrics.db.track.operation("update", "users");
     try {
       if (!passwordHash) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "database",
           operation: "invalid_password_hash",
         });
@@ -119,7 +119,7 @@ export class UserRepo {
       );
       return result.modifiedCount;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "password_update_failed",
       });
@@ -134,7 +134,7 @@ export class UserRepo {
     userId: string,
     updateData: User,
   ): Promise<User | null> {
-    const timer = trackDbOperation("update", "users");
+    const timer = Metrics.db.track.operation("update", "users");
     try {
       const result = await this.collection.findOneAndUpdate(
         { userId: userId },
@@ -151,7 +151,7 @@ export class UserRepo {
 
       return result || null;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "username_update_failed",
       });
@@ -163,9 +163,9 @@ export class UserRepo {
   }
 
   async deleteUserById(userId: string): Promise<void> {
-    const timer = trackDbOperation("delete", "users");
+    const timer = Metrics.db.track.operation("delete", "users");
     if (!userId) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "invalid_user_id",
       });
@@ -176,13 +176,13 @@ export class UserRepo {
     try {
       const result = await this.collection.deleteOne({ userId });
       if (result.deletedCount === 0) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "database",
           operation: "delete_user_failed",
         });
       }
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "delete_user_failed",
       });
@@ -194,7 +194,7 @@ export class UserRepo {
   }
 
   async updateUserEmail(userId: string, email: string): Promise<number> {
-    const timer = trackDbOperation("update", "users");
+    const timer = Metrics.db.track.operation("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -207,7 +207,7 @@ export class UserRepo {
       );
       return result.modifiedCount;
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "email_update_failed",
       });
@@ -223,7 +223,7 @@ export class UserRepo {
     secret: string,
     recoveryCodes: string[],
   ): Promise<void> {
-    const timer = trackDbOperation("update", "users");
+    const timer = Metrics.db.track.operation("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -236,14 +236,14 @@ export class UserRepo {
         },
       );
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "database",
           operation: "user_not_found",
         });
         throw new Error("User not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "two_factor_enable_failed",
       });
@@ -255,7 +255,7 @@ export class UserRepo {
   }
 
   async disableTwoFactor(userId: string): Promise<void> {
-    const timer = trackDbOperation("update", "users");
+    const timer = Metrics.db.track.operation("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -270,14 +270,14 @@ export class UserRepo {
         },
       );
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        Metrics.db.counters.errors.add(1, {
           type: "database",
           operation: "user_not_found",
         });
         throw new Error("User not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      Metrics.db.counters.errors.add(1, {
         type: "database",
         operation: "two_factor_disable_failed",
       });
