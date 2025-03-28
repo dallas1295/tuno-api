@@ -5,7 +5,7 @@ interface UserLink {
   method: string;
 }
 
-interface UserResponse {
+export interface UserResponse {
   username: string;
   email: string;
   createdAt: Date;
