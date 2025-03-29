@@ -1,5 +1,5 @@
 import { JWTPayload, jwtVerify, SignJWT } from "@panva/jose";
-import { redisService } from "./redisService.ts";
+import { RedisManager } from "./redisService.ts";
 import { secretKey, tokenConfig, TokenPair } from "../utils/token.ts";
 import "@std/dotenv/load";
 
@@ -88,7 +88,7 @@ export const tokenService = {
       if (payload.exp) {
         const keyRedis = `blacklist:${tokenType}:${token}`;
         const timeDiff = payload.exp - Math.floor(Date.now() / 1000);
-        await redisService.setKey(keyRedis, "true", timeDiff);
+        await RedisManager.setex(keyRedis, timeDiff, "true");
       }
     } catch (error) {
       console.error("Error blacklisting token:", error);
@@ -99,7 +99,7 @@ export const tokenService = {
   isTokenBlacklisted: async (token: string): Promise<boolean> => {
     try {
       const keyRedis = `blacklist:*:${token}`;
-      const keys = await redisService.getKeysByPattern(keyRedis);
+      const keys = await RedisManager.keys(keyRedis);
       return keys.length > 0;
     } catch (error) {
       console.error("Error checking blacklist:", error);
@@ -110,8 +110,8 @@ export const tokenService = {
   blacklistUserTokens: async (userId: string): Promise<void> => {
     try {
       const pattern = `blacklist:*:${userId}:*`;
-      const keys = await redisService.getKeysByPattern(pattern);
-      await Promise.all(keys.map((key) => redisService.deleteKey(key)));
+      const keys = await RedisManager.keys(pattern);
+      await Promise.all(keys.map((key) => RedisManager.del(key)));
     } catch (error) {
       console.error("Error blacklisting user tokens:", error);
       throw new Error("Failed to blacklist user tokens");

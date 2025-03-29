@@ -1,90 +1,62 @@
-import { createClient } from "redis";
-import type { RedisClientType } from "redis";
+import { RedisClient } from "@iuioiua/redis";
 import "@std/dotenv/load";
 
-const redisUrl = Deno.env.get("REDIS_URL");
-if (!redisUrl) {
-  throw new Error("Redis URL is not provided");
-}
+const redisPort = await Deno.connect({ port: 6379 });
+const client = new RedisClient(redisPort);
 
-const client = createClient({
-  url: redisUrl,
-}) as RedisClientType;
+export class RedisManager {
+  private static client: RedisClient = client;
 
-client.on(
-  "error",
-  (error: Error) => console.log(`Redis client error ${error.message}`),
-);
-
-class RedisManager {
-  private static client: RedisClientType = client;
-  private static isConnected = false;
-
-  public static async getClient(): Promise<RedisClientType> {
-    try {
-      if (!this.isConnected) {
-        await this.client.connect();
-        this.isConnected = true;
-        console.log("Redis connection established");
-      }
-      return this.client;
-    } catch (error) {
-      this.isConnected = false;
-      console.error(`Error connecting to Redis: ${error}`);
-      throw new Error("Error connecting to Redis");
-    }
+  public static async getClient(): Promise<RedisClient> {
+    return this.client;
   }
-} // Close the class here
 
-export const redisService = {
-  setKey: async (
-    key: string,
-    value: string,
-    expirationInSeconds: number,
-  ): Promise<void> => {
-    const client = await RedisManager.getClient();
-    await client.set(key, value, { EX: expirationInSeconds });
-  },
-
-  getKey: async (key: string): Promise<string | null> => {
-    const client = await RedisManager.getClient();
-    return client.get(key);
-  },
-
-  deleteKey: async (key: string): Promise<void> => {
-    const client = await RedisManager.getClient();
-    await client.del(key);
-  },
-
-  keyExists: async (key: string): Promise<boolean> => {
-    const client = await RedisManager.getClient();
-    const exists = await client.exists(key);
-    return exists > 0;
-  },
-
-  getKeysByPattern: async (pattern: string): Promise<string[]> => {
-    const client = await RedisManager.getClient();
-    return client.keys(pattern);
-  },
-
-  isConnected: async (): Promise<boolean> => {
+  public static async ping(): Promise<boolean> {
     try {
-      const client = await RedisManager.getClient();
-      await client.ping();
-      return true;
-    } catch {
+      const reply = await this.client.sendCommand(["PING"]);
+      return reply === "PONG";
+    } catch (error) {
+      console.error("Redis ping falied: ", error);
       return false;
     }
-  },
+  }
 
-  closeConnection: async (): Promise<void> => {
+  public static async del(key: string): Promise<boolean> {
     try {
-      const client = await RedisManager.getClient();
-      await client.quit();
-      RedisManager["isConnected"] = false;
+      const reply = await this.client.sendCommand(["DEL", key]);
+      return reply === 1;
     } catch (error) {
-      console.error(`Error closing Redis connection: ${error}`);
-      throw error;
+      console.error(`Redis DEL failed for key ${key}:`, error);
+      return false;
     }
-  },
-};
+  }
+
+  public static async keys(pattern: string): Promise<string[]> {
+    try {
+      const reply = await this.client.sendCommand(["KEYS", pattern]);
+      return Array.isArray(reply) ? reply as string[] : [];
+    } catch (error) {
+      console.error(`Redis KEYS failed for pattern ${pattern}:`, error);
+      return [];
+    }
+  }
+
+  public static async setex(
+    key: string,
+    seconds: number,
+    value: string,
+  ): Promise<boolean> {
+    try {
+      const reply = await this.client.sendCommand([
+        "SETEX",
+        key,
+        seconds.toString(),
+        value,
+      ]);
+      return reply === "OK";
+    } catch (error) {
+      console.error(`Redis SETEX failed for key ${key}: `, error);
+      return false;
+    }
+  }
+}
