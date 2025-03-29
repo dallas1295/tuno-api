@@ -1,6 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { User } from "../models/userModel.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
 export class UserRepo {
@@ -13,7 +13,7 @@ export class UserRepo {
   }
 
   async createUser(user: User): Promise<User> {
-    const timer = trackDbOperation("insert", "users");
+    const timer = DatabaseMetrics.track("insert", "users");
     try {
       if (!user.username || user.username.trim() === "") {
         throw new Error("Username is required");
@@ -33,12 +33,12 @@ export class UserRepo {
       console.error("Failed to create user: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    const timer = trackDbOperation("find", "users");
+    const timer = DatabaseMetrics.track("find", "users");
     try {
       const user = await this.collection.findOne({ username });
       if (!user) {
@@ -53,12 +53,12 @@ export class UserRepo {
       console.error("Failed to find user by username: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async findById(userId: string): Promise<User | null> {
-    const timer = trackDbOperation("find", "users");
+    const timer = DatabaseMetrics.track("find", "users");
     try {
       console.log(`Finding user with id: ${userId}`);
       const user = await this.collection.findOne(
@@ -91,7 +91,7 @@ export class UserRepo {
       console.error("Failed to find user by id: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -99,7 +99,7 @@ export class UserRepo {
     userId: string,
     passwordHash: string,
   ): Promise<number> {
-    const timer = trackDbOperation("update", "users");
+    const timer = DatabaseMetrics.track("update", "users");
     try {
       if (!passwordHash) {
         ErrorCounter.inc({
@@ -126,7 +126,7 @@ export class UserRepo {
       console.error("Failed to update user password: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -134,7 +134,7 @@ export class UserRepo {
     userId: string,
     updateData: User,
   ): Promise<User | null> {
-    const timer = trackDbOperation("update", "users");
+    const timer = DatabaseMetrics.track("update", "users");
     try {
       const result = await this.collection.findOneAndUpdate(
         { userId: userId },
@@ -158,12 +158,12 @@ export class UserRepo {
       console.error("Failed to update username: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async deleteUserById(userId: string): Promise<void> {
-    const timer = trackDbOperation("delete", "users");
+    const timer = DatabaseMetrics.track("delete", "users");
     if (!userId) {
       ErrorCounter.inc({
         type: "database",
@@ -189,12 +189,12 @@ export class UserRepo {
       console.error("Failed to delete user: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async updateUserEmail(userId: string, email: string): Promise<number> {
-    const timer = trackDbOperation("update", "users");
+    const timer = DatabaseMetrics.track("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -214,7 +214,7 @@ export class UserRepo {
       console.error("Failed to update user email: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -223,7 +223,7 @@ export class UserRepo {
     secret: string,
     recoveryCodes: string[],
   ): Promise<void> {
-    const timer = trackDbOperation("update", "users");
+    const timer = DatabaseMetrics.track("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -250,12 +250,12 @@ export class UserRepo {
       console.error("Failed to enable two factor: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async disableTwoFactor(userId: string): Promise<void> {
-    const timer = trackDbOperation("update", "users");
+    const timer = DatabaseMetrics.track("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId: userId },
@@ -284,7 +284,7 @@ export class UserRepo {
       console.error("Failed to disable two factor: ", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 }

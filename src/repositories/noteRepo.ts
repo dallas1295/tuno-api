@@ -6,7 +6,7 @@ import {
   UpdateFilter,
 } from "mongodb";
 import { Note } from "../models/noteModel.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
 export class NoteRepo {
@@ -19,7 +19,7 @@ export class NoteRepo {
   }
 
   async createNote(note: Note): Promise<Note> {
-    const timer = trackDbOperation("insert", "note");
+    const timer = DatabaseMetrics.track("insert", "note");
 
     try {
       if (!note.noteName || note.noteName.trim() === "") {
@@ -36,11 +36,11 @@ export class NoteRepo {
       console.log("Failed to create note");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
   async getUserNotes(userId: string): Promise<Note[] | null> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter: Filter<Note> = { userId, isArchived: false };
@@ -58,12 +58,12 @@ export class NoteRepo {
       console.log("Failed to get user notes");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getNote(userId: string, noteId: string): Promise<Note | null> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter = { noteId: noteId, userId: userId };
@@ -82,12 +82,12 @@ export class NoteRepo {
       console.log("Failed to get note");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async countUserNotes(userId: string): Promise<number> {
-    const timer = trackDbOperation("count", "note");
+    const timer = DatabaseMetrics.track("count", "note");
 
     try {
       const count = await this.collection.countDocuments({
@@ -104,12 +104,12 @@ export class NoteRepo {
       console.log("Failed to count user notes");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getAllTags(userId: string): Promise<string[]> {
-    const timer = trackDbOperation("distinct", "note");
+    const timer = DatabaseMetrics.track("distinct", "note");
 
     try {
       const tags = await this.collection.distinct("tags", { userId: userId });
@@ -126,7 +126,7 @@ export class NoteRepo {
       console.log("Failed to get all tags");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -135,7 +135,7 @@ export class NoteRepo {
     noteId: string,
     updates: Partial<Note>,
   ): Promise<void> {
-    const timer = trackDbOperation("update", "note");
+    const timer = DatabaseMetrics.track("update", "note");
 
     try {
       const filter = {
@@ -168,12 +168,12 @@ export class NoteRepo {
       console.log("Failed to update note");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async deleteNote(userId: string, noteId: string): Promise<void> {
-    const timer = trackDbOperation("delete", "note");
+    const timer = DatabaseMetrics.track("delete", "note");
 
     try {
       const filter = {
@@ -198,7 +198,7 @@ export class NoteRepo {
       console.log("Failed to delete note");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -207,7 +207,7 @@ export class NoteRepo {
     noteId: string,
     status: boolean,
   ): Promise<void> {
-    const timer = trackDbOperation("archive", "note");
+    const timer = DatabaseMetrics.track("archive", "note");
 
     try {
       const filter = {
@@ -238,11 +238,11 @@ export class NoteRepo {
       console.log("Failed to change note archived status ");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
   async getArchivedNotes(userId: string): Promise<Note[] | null> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter: Filter<Note> = { userId, isArchived: true };
@@ -260,14 +260,14 @@ export class NoteRepo {
       console.log("Failed to get archived notes");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
   async updateNotePinStatus(
     filter: Filter<Note>,
     update: UpdateFilter<Note>,
   ): Promise<void> {
-    const timer = trackDbOperation("update", "note");
+    const timer = DatabaseMetrics.track("update", "note");
 
     try {
       const result = await this.collection.updateOne(filter, update);
@@ -287,12 +287,12 @@ export class NoteRepo {
       console.log("Failed to update note pin status");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async findHighestPinnedPosition(userId: string): Promise<number> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const highestPinnedNote = await this.collection
@@ -313,12 +313,12 @@ export class NoteRepo {
       console.log("Failed to find highest pinned position");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getPinnedNotes(userId: string): Promise<Note[] | null> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter: Filter<Note> = { userId, isPinned: true };
@@ -336,7 +336,7 @@ export class NoteRepo {
       console.log("Failed to get pinned notes");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
   async findNotes(
@@ -348,7 +348,7 @@ export class NoteRepo {
       endDate?: Date;
     },
   ): Promise<Note[]> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter: Filter<Note> = { userId };
@@ -384,7 +384,7 @@ export class NoteRepo {
       console.log("Failed to find notes");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -393,7 +393,7 @@ export class NoteRepo {
     noteId: string,
     newPos: number,
   ): Promise<void> {
-    const timer = trackDbOperation("update", "note");
+    const timer = DatabaseMetrics.track("update", "note");
 
     try {
       const note = await this.collection.findOne({ userId, noteId });
@@ -435,12 +435,12 @@ export class NoteRepo {
       console.log("Failed to update note pin position");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async countNotesByTag(userId: string, tag: string): Promise<number> {
-    const timer = trackDbOperation("count", "note");
+    const timer = DatabaseMetrics.track("count", "note");
 
     try {
       const filter: Filter<Note> = { userId, tags: tag };
@@ -454,12 +454,12 @@ export class NoteRepo {
       console.log("Failed to count notes by tag");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getSearchSuggestions(userId: string, query: string): Promise<string[]> {
-    const timer = trackDbOperation("find", "note");
+    const timer = DatabaseMetrics.track("find", "note");
 
     try {
       const filter: Filter<Note> = {
@@ -482,7 +482,7 @@ export class NoteRepo {
       console.log("Failed to get search suggestions");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -493,7 +493,7 @@ export class NoteRepo {
     sortField = "createdAt",
     sortOrder: 1 | -1 = -1,
   ): Promise<{ notes: Note[]; totalCount: number }> {
-    const timer = trackDbOperation("find_paginated", "note");
+    const timer = DatabaseMetrics.track("find_paginated", "note");
 
     try {
       const filter: Filter<Note> = { userId, isArchived: false };
@@ -516,7 +516,7 @@ export class NoteRepo {
       console.error("Failed to get paginated notes", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -527,7 +527,7 @@ export class NoteRepo {
     sortField = "createdAt",
     sortOrder: 1 | -1 = -1,
   ): Promise<{ notes: Note[]; totalCount: number }> {
-    const timer = trackDbOperation("find_paginated", "archived_note");
+    const timer = DatabaseMetrics.track("find_paginated", "archived_note");
 
     try {
       const filter: Filter<Note> = { userId, isArchived: true };
@@ -550,7 +550,7 @@ export class NoteRepo {
       console.error("Failed to get paginated archived notes", error);
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 }

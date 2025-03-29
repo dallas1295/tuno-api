@@ -1,6 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { Todo } from "../models/todoModel.ts";
-import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
+import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
 export class TodoRepo {
@@ -13,7 +13,7 @@ export class TodoRepo {
   }
 
   async createTodo(todo: Todo): Promise<Todo> {
-    const timer = trackDbOperation("insert", "todo");
+    const timer = DatabaseMetrics.track("insert", "todo");
 
     try {
       if (!todo.todoName || todo.todoName.trim() === "") {
@@ -31,12 +31,12 @@ export class TodoRepo {
       console.log("Failed to create todo");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getUserTodos(userId: string): Promise<Todo[] | null> {
-    const timer = trackDbOperation("find", "todo");
+    const timer = DatabaseMetrics.track("find", "todo");
 
     try {
       const findUserTodos = this.collection.find({ userId: userId });
@@ -51,12 +51,12 @@ export class TodoRepo {
       console.log("failed to fetch user todos");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async getTodoById(todoId: string): Promise<Todo | null> {
-    const timer = trackDbOperation("find", "todo");
+    const timer = DatabaseMetrics.track("find", "todo");
 
     try {
       const findUserTodo = this.collection.findOne({
@@ -74,7 +74,7 @@ export class TodoRepo {
       console.log("failed to fetch user todo by id");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
@@ -83,7 +83,7 @@ export class TodoRepo {
     todoId: string,
     updates: Partial<Todo>,
   ): Promise<void> {
-    const timer = trackDbOperation("update", "todo");
+    const timer = DatabaseMetrics.track("update", "todo");
     try {
       const filter = {
         userId: userId,
@@ -119,12 +119,12 @@ export class TodoRepo {
       console.log("failed to update todo");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async deleteTodo(userId: string, todoId: string): Promise<void> {
-    const timer = trackDbOperation("delete", "todo");
+    const timer = DatabaseMetrics.track("delete", "todo");
 
     try {
       const filter = {
@@ -148,12 +148,12 @@ export class TodoRepo {
       console.log("failed to delete todo");
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 
   async countUserTodos(userId: string): Promise<number> {
-    const timer = trackDbOperation("count", "todo");
+    const timer = DatabaseMetrics.track("count", "todo");
 
     try {
       const count = await this.collection.countDocuments({ userId: userId });
@@ -166,7 +166,7 @@ export class TodoRepo {
       });
       throw error;
     } finally {
-      timer.observeDuration();
+      timer.end();
     }
   }
 }
