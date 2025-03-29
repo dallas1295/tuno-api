@@ -11,14 +11,6 @@ meter.addMetricReader(prometheusExporter);
 
 const dbMeter = meter.getMeter("db-metrics");
 
-const DBOperationDuration = dbMeter.createHistogram(
-  "db_operation_duration",
-  {
-    description: "Duration of database operations",
-    unit: "ms",
-  },
-);
-
 export const ErrorCounter = dbMeter.createCounter("error_counter", {
   description: "Number of api errors",
 });
@@ -30,16 +22,45 @@ export const ActiveConnections = dbMeter.createUpDownCounter(
   },
 );
 
-export const trackDbOperation = (operation: string, collection: string) => {
-  const startTime = performance.now();
-
-  return {
-    observeDuration: () => {
-      const duration = performance.now() - startTime;
-      DBOperationDuration.record(duration, {
-        operation,
-        collection,
-      });
+export const DatabaseMetrics = {
+  // Track operation duration
+  operationDuration: dbMeter.createHistogram(
+    "db_operation_duration",
+    {
+      description: "Duration of database operations",
+      unit: "ms",
     },
-  };
+  ),
+
+  // Track number of active/ongoing DB operations
+  activeOperations: dbMeter.createUpDownCounter(
+    "db_active_operations",
+    {
+      description: "Number of ongoing database operations",
+    },
+  ),
+
+  // Track connection pool size
+  connectionPoolSize: dbMeter.createUpDownCounter(
+    "db_connection_pool_size",
+    {
+      description: "Current size of the database connection pool",
+    },
+  ),
+
+  track(operation: string, collection: string) {
+    const startTime = performance.now();
+    this.activeOperations.add(1, { operation, collection });
+
+    return {
+      end: () => {
+        const duration = performance.now() - startTime;
+        this.operationDuration.record(duration, {
+          operation,
+          collection,
+        });
+        this.activeOperations.add(-1, { operation, collection });
+      },
+    };
+  },
 };
