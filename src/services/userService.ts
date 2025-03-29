@@ -1,7 +1,7 @@
 import { User, UserProfile } from "../models/userModel.ts";
 import { UserRepo } from "../repositories/userRepo.ts";
 import { validateEmail, validatePassword } from "../utils/validators.ts";
-import { Metrics } from "../utils/metrics.ts";
+import { ErrorCounter } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";
 import { hashPassword, verifyPassword } from "../services/passwordService.ts";
@@ -49,7 +49,7 @@ export class UserService {
       const createdUser = await this.userRepo.createUser(user);
       return createdUser;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "create_user",
       });
@@ -73,7 +73,7 @@ export class UserService {
 
       return userProfile;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "get_user_profile",
       });
@@ -123,7 +123,7 @@ export class UserService {
         hashedPassword,
       );
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "change_password",
       });
@@ -173,7 +173,7 @@ export class UserService {
         { username: newName.trim() } as User,
       );
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "change_username",
       });
@@ -220,7 +220,7 @@ export class UserService {
 
       return true;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "change_email",
       });
@@ -258,7 +258,7 @@ export class UserService {
 
       return { enabled: true, qrCode: qrSvg, uri: uri };
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "enable_two_factor",
       });
@@ -298,7 +298,7 @@ export class UserService {
 
       return true;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "disable_two_factor",
       });
@@ -346,7 +346,7 @@ export class UserService {
 
       return await this.userRepo.deleteUserById(userId);
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "UserService",
         operation: "delete_user",
       });

@@ -5,7 +5,7 @@ import {
   validateRecurringPattern,
   validateTags,
 } from "../utils/validators.ts";
-import { Metrics } from "../utils/metrics.ts";
+import { ErrorCounter } from "../utils/metrics.ts";
 import { MongoClient } from "mongodb";
 import "@std/dotenv/load";
 
@@ -68,7 +68,7 @@ export class TodoService {
       this.prepTodo(todo);
 
       if (!this.isTodoValid(todo)) {
-        Metrics.db.counters.errors.add(1, {
+        ErrorCounter.inc({
           type: "validation",
           operation: "create_todo_failed",
         });
@@ -77,7 +77,7 @@ export class TodoService {
       const createdTodo = await this.todoRepo.createTodo(todo);
       return createdTodo;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "create_todo_failed",
       });
@@ -100,7 +100,7 @@ export class TodoService {
       const updatedTodo = this.prepTodo({ ...exists, ...updates });
 
       if (!this.isTodoValid(updatedTodo)) {
-        Metrics.db.counters.errors.add(1, {
+        ErrorCounter.inc({
           type: "validation",
           operation: "udpate_todo_failed",
         });
@@ -110,7 +110,7 @@ export class TodoService {
       await this.todoRepo.updateTodo(userId, todoId, updatedTodo);
       return updatedTodo;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "update_todo_failed",
       });
@@ -202,7 +202,7 @@ export class TodoService {
 
       return filteredTodos;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -221,7 +221,7 @@ export class TodoService {
 
       return todos.length;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -252,7 +252,7 @@ export class TodoService {
 
       return { tags: tags, tagCount: tags.length };
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -275,7 +275,7 @@ export class TodoService {
 
       return todo;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "toggle_complete_failed",
       });
@@ -355,7 +355,7 @@ export class TodoService {
 
       return stats;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "get_todo_stats_failed",
       });

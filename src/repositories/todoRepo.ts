@@ -1,6 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { Todo } from "../models/todoModel.ts";
-import { Metrics } from "../utils/metrics.ts";
+import { ErrorCounter, trackDbOperation } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 
 export class TodoRepo {
@@ -13,7 +13,7 @@ export class TodoRepo {
   }
 
   async createTodo(todo: Todo): Promise<Todo> {
-    const timer = Metrics.db.track.operation("insert", "todo");
+    const timer = trackDbOperation("insert", "todo");
 
     try {
       if (!todo.todoName || todo.todoName.trim() === "") {
@@ -24,7 +24,7 @@ export class TodoRepo {
 
       return todo; //UUID set in service before being sent to repository
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "create_todo_failed",
       });
@@ -36,7 +36,7 @@ export class TodoRepo {
   }
 
   async getUserTodos(userId: string): Promise<Todo[] | null> {
-    const timer = Metrics.db.track.operation("find", "todo");
+    const timer = trackDbOperation("find", "todo");
 
     try {
       const findUserTodos = this.collection.find({ userId: userId });
@@ -44,7 +44,7 @@ export class TodoRepo {
 
       return userTodos;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "get_user_todos_failed",
       });
@@ -56,7 +56,7 @@ export class TodoRepo {
   }
 
   async getTodoById(todoId: string): Promise<Todo | null> {
-    const timer = Metrics.db.track.operation("find", "todo");
+    const timer = trackDbOperation("find", "todo");
 
     try {
       const findUserTodo = this.collection.findOne({
@@ -67,7 +67,7 @@ export class TodoRepo {
 
       return userTodo;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "get_todo_by_id_failed",
       });
@@ -83,7 +83,7 @@ export class TodoRepo {
     todoId: string,
     updates: Partial<Todo>,
   ): Promise<void> {
-    const timer = Metrics.db.track.operation("update", "todo");
+    const timer = trackDbOperation("update", "todo");
     try {
       const filter = {
         userId: userId,
@@ -105,14 +105,14 @@ export class TodoRepo {
       const result = await this.collection.updateOne(filter, update);
 
       if (result.matchedCount === 0) {
-        Metrics.db.counters.errors.add(1, {
+        ErrorCounter.inc({
           type: "database",
           operation: "todo_not_found",
         });
         throw new Error("Todo not found");
       }
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "todo_update_failed",
       });
@@ -124,7 +124,7 @@ export class TodoRepo {
   }
 
   async deleteTodo(userId: string, todoId: string): Promise<void> {
-    const timer = Metrics.db.track.operation("delete", "todo");
+    const timer = trackDbOperation("delete", "todo");
 
     try {
       const filter = {
@@ -134,14 +134,14 @@ export class TodoRepo {
       const result = await this.collection.deleteOne(filter);
 
       if (result.deletedCount === 0) {
-        Metrics.db.counters.errors.add(1, {
+        ErrorCounter.inc({
           type: "database",
           operation: "todo_not_found",
         });
         throw new Error("Todo not found");
       }
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "delete_todo_failed",
       });
@@ -153,14 +153,14 @@ export class TodoRepo {
   }
 
   async countUserTodos(userId: string): Promise<number> {
-    const timer = Metrics.db.track.operation("count", "todo");
+    const timer = trackDbOperation("count", "todo");
 
     try {
       const count = await this.collection.countDocuments({ userId: userId });
 
       return count;
     } catch (error) {
-      Metrics.db.counters.errors.add(1, {
+      ErrorCounter.inc({
         type: "database",
         operation: "count_user_todos_failed",
       });
