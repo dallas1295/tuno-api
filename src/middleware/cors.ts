@@ -1,4 +1,4 @@
-import { Context, Next } from "@oak/oak";
+import { Context, Next } from "@oak/oak";"
 
 export async function corsMiddleware(ctx: Context, next: Next) {
   try {

@@ -1,5 +1,6 @@
 import { validateEmail, validatePassword } from "../utils/validators.ts";
 import { tokenService } from "../services/tokenService.ts";
+import { Response } from "../utils/response.ts";
 import * as jose from "@panva/jose";
 import { Context, Next } from "@oak/oak";
 
@@ -8,22 +9,19 @@ export async function authMiddleware(ctx: Context, next: Next) {
     const authHeader = ctx.request.headers.get("Authorization");
 
     if (!authHeader) {
-      ctx.response.status = 401;
-      ctx.response.body = { message: "No authorization header" };
+      Response.unauthorized(ctx, "No authorization header");
       return;
     }
 
     const [bearer, token] = authHeader.split(" ");
 
     if (bearer !== "Bearer" || !token) {
-      ctx.response.status = 401;
-      ctx.response.body = { message: "Invalid authorization format" };
+      Response.unauthorized(ctx, "Invalid authorization format");
       return;
     }
 
     if (await tokenService.isTokenBlacklisted(token)) {
-      ctx.response.status = 401;
-      ctx.response.body = { message: "Token has been blacklisted" };
+      Response.unauthorized(ctx, "Token has been blacklisted");
       return;
     }
 
@@ -32,15 +30,12 @@ export async function authMiddleware(ctx: Context, next: Next) {
     return next();
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
-      ctx.response.status = 401;
-      ctx.response.body = { message: "Token expired" };
+      Response.unauthorized(ctx, "Token expired");
     } else if (error instanceof jose.errors.JWTInvalid) {
-      ctx.response.status = 401;
-      ctx.response.body = { message: "Token invalid" };
+      Response.unauthorized(ctx, "Token invalid");
     } else {
       console.error("Authentication error:", error);
-      ctx.response.status = 500;
-      ctx.response.body = { message: "Internal server error" };
+      Response.internalError(ctx, "Internal server error");
     }
     return;
   }
@@ -52,31 +47,26 @@ export async function validateInput(ctx: Context, next: Next) {
     const body = await bodyJson.json();
 
     if (!body.email || !body.password) {
-      ctx.response.status = 400;
-      ctx.response.body = { message: "Email and password are required" };
+      Response.badRequest(ctx, "Email and password are required");
       return;
     }
 
     if (!validateEmail(body.email)) {
-      ctx.response.status = 400;
-      ctx.response.body = { message: "Invalid email format" };
+      Response.badRequest(ctx, "Invalid email format");
       return;
     }
 
     if (!validatePassword(body.password)) {
-      ctx.response.status = 400;
-      ctx.response.body = {
-        message: "Invalid password format",
-      };
+      Response.badRequest(ctx, "Invalid password format");
       return;
     }
 
     await next();
   } catch (error) {
-    ctx.response.status = 400;
-    ctx.response.body = {
-      error: error instanceof Error ? error.message : "Invalid request body",
-    };
+    Response.badRequest(
+      ctx,
+      error instanceof Error ? error.message : "Invalid request body",
+    );
 
     return;
   }
