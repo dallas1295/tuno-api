@@ -15,7 +15,7 @@ export interface User {
 export interface LoginRequest {
   username: string;
   password: string;
-  two_factor_code?: string;
+  twoFactorCode?: string;
 }
 
 export interface UserProfile {
