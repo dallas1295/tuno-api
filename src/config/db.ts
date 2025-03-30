@@ -3,7 +3,7 @@ import {
   MongoClientOptions,
   MongoNotConnectedError,
   MongoServerError,
-} from "mongodb";
+} from "npm:mongodb";
 import "@std/dotenv/load";
 
 export interface DbConfig {
