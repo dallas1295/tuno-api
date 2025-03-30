@@ -46,8 +46,8 @@ export async function verifyPassword(
 
 // Test
 
-const testHashing = await hashPassword("blubber");
-console.log(testHashing);
-
-const testVerify = await verifyPassword(testHashing, "blubber");
-console.log(testVerify);
+// const testHashing = await hashPassword("blubber");
+// console.log(testHashing);
+//
+// const testVerify = await verifyPassword(testHashing, "blubber");
+// console.log(testVerify);

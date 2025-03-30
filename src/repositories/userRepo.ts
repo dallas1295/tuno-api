@@ -26,7 +26,7 @@ export class UserRepo {
         userId: result.insertedId.toString(),
       };
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "create_user_failed",
       });
@@ -46,7 +46,7 @@ export class UserRepo {
       }
       return user;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "find_by_username_failed",
       });
@@ -84,7 +84,7 @@ export class UserRepo {
       }
       return user;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "find_by_id_failed",
       });
@@ -102,7 +102,7 @@ export class UserRepo {
     const timer = DatabaseMetrics.track("update", "users");
     try {
       if (!passwordHash) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "invalid_password_hash",
         });
@@ -119,7 +119,7 @@ export class UserRepo {
       );
       return result.modifiedCount;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "password_update_failed",
       });
@@ -151,7 +151,7 @@ export class UserRepo {
 
       return result || null;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "username_update_failed",
       });
@@ -165,7 +165,7 @@ export class UserRepo {
   async deleteUserById(userId: string): Promise<void> {
     const timer = DatabaseMetrics.track("delete", "users");
     if (!userId) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "invalid_user_id",
       });
@@ -176,13 +176,13 @@ export class UserRepo {
     try {
       const result = await this.collection.deleteOne({ userId });
       if (result.deletedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "delete_user_failed",
         });
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "delete_user_failed",
       });
@@ -207,7 +207,7 @@ export class UserRepo {
       );
       return result.modifiedCount;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "email_update_failed",
       });
@@ -236,14 +236,14 @@ export class UserRepo {
         },
       );
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "user_not_found",
         });
         throw new Error("User not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "two_factor_enable_failed",
       });
@@ -270,14 +270,14 @@ export class UserRepo {
         },
       );
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "user_not_found",
         });
         throw new Error("User not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "two_factor_disable_failed",
       });

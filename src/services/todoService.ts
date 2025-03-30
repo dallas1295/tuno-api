@@ -68,7 +68,7 @@ export class TodoService {
       this.prepTodo(todo);
 
       if (!this.isTodoValid(todo)) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "validation",
           operation: "create_todo_failed",
         });
@@ -77,7 +77,7 @@ export class TodoService {
       const createdTodo = await this.todoRepo.createTodo(todo);
       return createdTodo;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "create_todo_failed",
       });
@@ -100,7 +100,7 @@ export class TodoService {
       const updatedTodo = this.prepTodo({ ...exists, ...updates });
 
       if (!this.isTodoValid(updatedTodo)) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "validation",
           operation: "udpate_todo_failed",
         });
@@ -110,7 +110,7 @@ export class TodoService {
       await this.todoRepo.updateTodo(userId, todoId, updatedTodo);
       return updatedTodo;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "update_todo_failed",
       });
@@ -202,7 +202,7 @@ export class TodoService {
 
       return filteredTodos;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -221,7 +221,7 @@ export class TodoService {
 
       return todos.length;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -252,7 +252,7 @@ export class TodoService {
 
       return { tags: tags, tagCount: tags.length };
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "fetch_todos_failed",
       });
@@ -275,7 +275,7 @@ export class TodoService {
 
       return todo;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "toggle_complete_failed",
       });
@@ -355,7 +355,7 @@ export class TodoService {
 
       return stats;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_todo_stats_failed",
       });

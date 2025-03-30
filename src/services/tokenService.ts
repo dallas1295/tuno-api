@@ -1,10 +1,21 @@
 import { JWTPayload, jwtVerify, SignJWT } from "@panva/jose";
+import { User } from "../models/userModel.ts";
 import { RedisManager } from "./redisService.ts";
 import { secretKey, tokenConfig, TokenPair } from "../utils/token.ts";
 import "@std/dotenv/load";
 
+interface UserPayload extends JWTPayload {
+  userId: string;
+  username: string;
+  type?: string;
+}
+
 export const tokenService = {
-  generateTokenPair: async (payload: JWTPayload): Promise<TokenPair> => {
+  generateTokenPair: async (user: User): Promise<TokenPair> => {
+    const payload: UserPayload = {
+      userId: user.userId,
+      username: user.username,
+    };
     try {
       const accessToken = await new SignJWT({ ...payload })
         .setProtectedHeader({ alg: "HS256" })
@@ -38,7 +49,6 @@ export const tokenService = {
 
   verifyToken: async (token: string): Promise<JWTPayload> => {
     try {
-      // Check if token is blacklisted
       const isBlacklisted = await tokenService.isTokenBlacklisted(token);
       if (isBlacklisted) {
         throw new Error("Token is blacklisted");
@@ -64,8 +74,7 @@ export const tokenService = {
         throw new Error("Invalid token type");
       }
 
-      // Generate new access token
-      const { ["type"]: _tokenType, ...tokenPayload } = payload; // Remove refresh type
+      const { ["type"]: _tokenType, ...tokenPayload } = payload;
       return await new SignJWT(tokenPayload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
@@ -115,6 +124,48 @@ export const tokenService = {
     } catch (error) {
       console.error("Error blacklisting user tokens:", error);
       throw new Error("Failed to blacklist user tokens");
+    }
+  },
+  generateTempToken: async (
+    userId: string,
+    expiry: string,
+  ): Promise<string> => {
+    try {
+      const tempToken = await new SignJWT({
+        userId,
+        type: "temp",
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setIssuer(tokenConfig.issuer)
+        .setAudience(tokenConfig.audience)
+        .setExpirationTime(expiry)
+        .sign(secretKey);
+
+      return tempToken;
+    } catch (error) {
+      console.error("Error generating temporary token:", error);
+      throw new Error("Failed to generate temporary token");
+    }
+  },
+
+  verifyTempToken: async (
+    token: string,
+  ): Promise<UserPayload> => {
+    try {
+      const { payload } = await jwtVerify(token, secretKey, {
+        issuer: tokenConfig.issuer,
+        audience: tokenConfig.audience,
+      });
+
+      if (!payload.temp) {
+        throw new Error("Invalid temporary token");
+      }
+
+      return payload as UserPayload;
+    } catch (error) {
+      console.error("Temporary token verification failed:", error);
+      throw new Error("Invalid temporary token");
     }
   },
 };

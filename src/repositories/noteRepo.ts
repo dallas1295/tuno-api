@@ -29,7 +29,7 @@ export class NoteRepo {
       await this.collection.insertOne(note);
       return note;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "create_note_failed",
       });
@@ -51,7 +51,7 @@ export class NoteRepo {
 
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_user_notes_failed",
       });
@@ -75,7 +75,7 @@ export class NoteRepo {
 
       return note;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_note_failed",
       });
@@ -97,7 +97,7 @@ export class NoteRepo {
 
       return count;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "count_user_notes_failed",
       });
@@ -119,7 +119,7 @@ export class NoteRepo {
       ) as string[];
       return stringTags;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_all_tags_failed",
       });
@@ -154,14 +154,14 @@ export class NoteRepo {
       const result = await this.collection.updateOne(filter, update);
 
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "note_not_found",
         });
         throw new Error("Note not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "note_update_failed",
       });
@@ -184,14 +184,14 @@ export class NoteRepo {
       const result = await this.collection.deleteOne(filter);
 
       if (result.deletedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "note_not_found",
         });
         throw new Error("Note not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "delete_note_failed",
       });
@@ -224,14 +224,14 @@ export class NoteRepo {
       const result = await this.collection.updateOne(filter, update);
 
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "note_not_found",
         });
         throw new Error("Note not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "update_archive_note_failed",
       });
@@ -253,7 +253,7 @@ export class NoteRepo {
 
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_archived_notes_failed",
       });
@@ -273,14 +273,14 @@ export class NoteRepo {
       const result = await this.collection.updateOne(filter, update);
 
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "note_not_found",
         });
         throw new Error("Note not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "update_note_pin_status_failed",
       });
@@ -306,7 +306,7 @@ export class NoteRepo {
         ? highestPinnedNote[0].pinnedPosition
         : 0;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "find_highest_pinned_position_failed",
       });
@@ -329,7 +329,7 @@ export class NoteRepo {
 
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_pinned_notes_failed",
       });
@@ -377,7 +377,7 @@ export class NoteRepo {
 
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "find_notes_failed",
       });
@@ -428,7 +428,7 @@ export class NoteRepo {
         { $set: { pinnedPosition: newPos, updatedAt: new Date() } },
       );
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "update_pin_pos_failed",
       });
@@ -447,7 +447,7 @@ export class NoteRepo {
       const count = await this.collection.countDocuments(filter);
       return count;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "count_notes_by_tag_failed",
       });
@@ -475,7 +475,7 @@ export class NoteRepo {
       const suggestions = notes.map((note) => note.noteName);
       return suggestions;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_search_suggestions_failed",
       });
@@ -509,7 +509,7 @@ export class NoteRepo {
 
       return { notes, totalCount };
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_paginated_notes_failed",
       });
@@ -543,7 +543,7 @@ export class NoteRepo {
 
       return { notes, totalCount };
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_paginated_archived_notes_failed",
       });

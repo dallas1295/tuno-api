@@ -49,7 +49,7 @@ export class UserService {
       const createdUser = await this.userRepo.createUser(user);
       return createdUser;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "create_user",
       });
@@ -73,7 +73,7 @@ export class UserService {
 
       return userProfile;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "get_user_profile",
       });
@@ -123,7 +123,7 @@ export class UserService {
         hashedPassword,
       );
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "change_password",
       });
@@ -131,6 +131,20 @@ export class UserService {
       throw error;
     }
   }
+
+  async findByUsername(username: string): Promise<User | null> {
+    try {
+      return await this.userRepo.findByUsername(username);
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "UserService",
+        operation: "find_by_username",
+      });
+      console.error("Error finding user by username");
+      throw error;
+    }
+  }
+
   async updateUsername(
     userId: string,
     oldName: string,
@@ -173,7 +187,7 @@ export class UserService {
         { username: newName.trim() } as User,
       );
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "change_username",
       });
@@ -220,7 +234,7 @@ export class UserService {
 
       return true;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "change_email",
       });
@@ -244,21 +258,21 @@ export class UserService {
       const totp = new OTPAuth.TOTP({
         issuer: "toNotes",
         label: "toNotesAuth",
-        algorith: "SHA512",
+        algorithm: "SHA512",
         digits: 6,
         period: 30,
-        secret: secret,
+        secret: secret.base32,
       });
 
       const recovery = generateRecoveryCodes();
       const uri = OTPAuth.URI.stringify(totp);
       const qrSvg = denoqr.renderToSvg(denoqr.encodeText(uri));
 
-      await this.userRepo.enableTwoFactor(userId, secret, recovery);
+      await this.userRepo.enableTwoFactor(userId, secret.base32, recovery);
 
       return { enabled: true, qrCode: qrSvg, uri: uri };
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "enable_two_factor",
       });
@@ -289,7 +303,10 @@ export class UserService {
         throw new Error("Invalid password");
       }
 
-      const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
+      const verifiedTotp = verifyTOTP(
+        OTPAuth.Secret.fromBase32(exists.twoFactorSecret!),
+        totp,
+      );
       if (!verifiedTotp) {
         throw new Error("OTP cannot be verified");
       }
@@ -298,7 +315,7 @@ export class UserService {
 
       return true;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "disable_two_factor",
       });
@@ -338,7 +355,12 @@ export class UserService {
         if (!totp) {
           throw new Error("OTP is require when two-factor is enabled");
         }
-        const verifiedTotp = verifyTOTP(exists.twoFactorSecret, totp);
+        const verifiedTotp = verifyTOTP(
+          OTPAuth.Secret.fromBase32(
+            exists.twoFactorSecret!,
+          ),
+          totp,
+        );
         if (!verifiedTotp) {
           throw new Error("OTP cannot be verified");
         }
@@ -346,7 +368,7 @@ export class UserService {
 
       return await this.userRepo.deleteUserById(userId);
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "UserService",
         operation: "delete_user",
       });

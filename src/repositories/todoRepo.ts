@@ -24,7 +24,7 @@ export class TodoRepo {
 
       return todo; //UUID set in service before being sent to repository
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "create_todo_failed",
       });
@@ -44,7 +44,7 @@ export class TodoRepo {
 
       return userTodos;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_user_todos_failed",
       });
@@ -67,7 +67,7 @@ export class TodoRepo {
 
       return userTodo;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_todo_by_id_failed",
       });
@@ -105,14 +105,14 @@ export class TodoRepo {
       const result = await this.collection.updateOne(filter, update);
 
       if (result.matchedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "todo_not_found",
         });
         throw new Error("Todo not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "todo_update_failed",
       });
@@ -134,14 +134,14 @@ export class TodoRepo {
       const result = await this.collection.deleteOne(filter);
 
       if (result.deletedCount === 0) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "todo_not_found",
         });
         throw new Error("Todo not found");
       }
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "delete_todo_failed",
       });
@@ -160,7 +160,7 @@ export class TodoRepo {
 
       return count;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "count_user_todos_failed",
       });

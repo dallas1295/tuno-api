@@ -110,7 +110,7 @@ export class NoteService {
       };
 
       if (!this.isNoteValid(note)) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "validation",
           operation: "create_note_failed",
         });
@@ -120,7 +120,7 @@ export class NoteService {
       const createdNote = await this.noteRepo.createNote(note);
       return createdNote;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "create_note_failed",
       });
@@ -216,7 +216,7 @@ export class NoteService {
 
       return result;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "service",
         operation: "fetch_user_notes_failed",
       });
@@ -249,7 +249,7 @@ export class NoteService {
 
       return result;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "service",
         operation: "fetch_archived_notes_failed",
       });
@@ -298,7 +298,7 @@ export class NoteService {
       }
       return notes;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "get_pinned_failed",
       });
@@ -312,7 +312,7 @@ export class NoteService {
       const note = await this.noteRepo.getNote(userId, noteId);
 
       if (!note) {
-        ErrorCounter.inc({
+        ErrorCounter.add(1, {
           type: "database",
           operation: "note_not_found",
         });
@@ -351,7 +351,7 @@ export class NoteService {
         update,
       );
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "database",
         operation: "toggle_pin_failed",
       });
@@ -401,7 +401,7 @@ export class NoteService {
 
       return tagsWithCount;
     } catch (error) {
-      ErrorCounter.inc({
+      ErrorCounter.add(1, {
         type: "service",
         operation: "get_note_tags_failed",
       });
