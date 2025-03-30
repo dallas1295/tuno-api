@@ -1,0 +1,224 @@
+import { assertEquals, assertExists } from "@std/assert";
+import { Context } from "@oak/oak";
+import { User } from "../src/models/userModel.ts";
+import {
+  loginController,
+  verifyTwoFactorController,
+} from "../src/controllers/login.ts";
+import { Response } from "../src/utils/response.ts";
+import { UserService } from "../src/services/userService.ts";
+import * as OTPAuth from "@hectorm/otpauth";
+import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
+
+interface ResponseData {
+  data?: {
+    token?: string;
+    user?: { username: string };
+    requireTwoFactor?: boolean;
+    tempToken?: string;
+  };
+  error?: string;
+}
+
+const createMockContext = (body: unknown): Context => ({
+  request: {
+    body: {
+      value: body,
+      json: () => body,
+    },
+  },
+  response: new Response(),
+  state: {},
+} as unknown as Context);
+
+// Test suite for login controller
+Deno.test({
+  name: "Login Controller Tests",
+  sanitizeResources: false,
+  sanitizeOps: false,
+
+  async fn(t) {
+    // Setup: Initialize MongoDB connection
+    await t.step("setup: initialize mongodb", async () => {
+      const client = await connectToDb();
+      const db = client.db();
+      await db.collection("users").deleteMany({});
+    });
+
+    const userService = new UserService();
+    let testUser: User;
+
+    // Setup: Create a test user
+    await t.step("setup: create test user", async () => {
+      testUser = await userService.createUser(
+        "testuser",
+        "test@example.com",
+        "Test123!@#$",
+      );
+      assertExists(testUser);
+    });
+
+    await t.step("should return 400 for missing credentials", async () => {
+      const ctx = createMockContext({});
+      await loginController(ctx);
+      assertEquals(ctx.response.status, 400);
+      assertEquals((ctx.response as ResponseData).error, "Invalid Input");
+    });
+
+    await t.step("should return 401 for non-existent user", async () => {
+      const ctx = createMockContext({
+        username: "nonexistent",
+        password: "Test123!@#$",
+      });
+      await loginController(ctx);
+      assertEquals(ctx.response.status, 401);
+      assertEquals((ctx.response as ResponseData).error, "User doesn't exist");
+    });
+
+    await t.step("should return 401 for invalid password", async () => {
+      const ctx = createMockContext({
+        username: "testuser",
+        password: "wrongpassword",
+      });
+      await loginController(ctx);
+      assertEquals(ctx.response.status, 401);
+      assertEquals((ctx.response as ResponseData).error, "Invalid password");
+    });
+
+    await t.step(
+      "should return success with token for valid credentials",
+      async () => {
+        const ctx = createMockContext({
+          username: "testuser",
+          password: "Test123!@#$",
+        });
+        await loginController(ctx);
+        const responseData = ctx.response.body as ResponseData;
+        assertEquals(ctx.response.status, 200);
+        assertExists(responseData.data?.token);
+        assertExists(responseData.data?.user);
+        assertEquals(responseData.data?.user?.username, "testuser");
+      },
+    );
+    // Test 2FA flow
+    await t.step("should handle 2FA enabled user", async () => {
+      // Enable 2FA for test user
+      const twoFactorSetup = await userService.enableTwoFactor(testUser.userId);
+      assertExists(twoFactorSetup);
+
+      const ctx = createMockContext({
+        username: "testuser",
+        password: "Test123!@#$",
+      });
+
+      await loginController(ctx);
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 200);
+      assertEquals(responseData.data?.requireTwoFactor, true);
+      assertExists(responseData.data?.tempToken);
+    });
+
+    // Cleanup
+    await t.step("cleanup: delete test user and close connection", async () => {
+      await userService.deleteUser(
+        testUser.userId,
+        "Test123!@#$",
+        "Test123!@#$",
+      );
+      await closeDatabaseConnection();
+    });
+  },
+});
+
+// Test suite for 2FA verification
+Deno.test({
+  name: "2FA Verification Controller Tests",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn(t) {
+    // Setup: Initialize MongoDB connection
+    await t.step("setup: initialize mongodb", async () => {
+      const client = await connectToDb();
+      const db = client.db();
+      await db.collection("users").deleteMany({});
+    });
+
+    const userService = new UserService();
+    let testUser: User;
+    let twoFactorSetup: {
+      enabled: boolean;
+      qrCode: string;
+      uri: string;
+    };
+    let totp: OTPAuth.TOTP;
+
+    // Setup: Create a test user with 2FA enabled
+    await t.step("setup: create test user with 2FA", async () => {
+      testUser = await userService.createUser(
+        "testuser2fa",
+        "test2fa@example.com",
+        "Test123!@#$",
+      );
+      twoFactorSetup = await userService.enableTwoFactor(testUser.userId);
+      assertExists(twoFactorSetup);
+
+      totp = new OTPAuth.TOTP({
+        secret: OTPAuth.Secret.fromBase32(twoFactorSetup.uri),
+        algorithm: "SHA512",
+        digits: 6,
+        period: 30,
+      });
+    });
+
+    await t.step("should return 400 for invalid input", async () => {
+      const ctx = createMockContext({});
+      await verifyTwoFactorController(ctx);
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 400);
+      assertEquals(responseData.error, "Invalid input");
+    });
+
+    await t.step("should return 400 for invalid TOTP code format", async () => {
+      const ctx = createMockContext({
+        tempToken: "valid-token",
+        totpCode: "12345", // Invalid length
+      });
+      await verifyTwoFactorController(ctx);
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 400);
+      assertEquals(responseData.error, "Invalid TOTP code format");
+    });
+
+    await t.step("should verify valid 2FA code", async () => {
+      // Generate a valid temp token first
+      const loginCtx = createMockContext({
+        username: "testuser2fa",
+        password: "Test123!@#$",
+      });
+      await loginController(loginCtx);
+      const loginResponseData = loginCtx.response.body as ResponseData;
+
+      const verifyCtx = createMockContext({
+        tempToken: loginResponseData.data?.tempToken,
+        totpCode: totp.generate(),
+      });
+
+      await verifyTwoFactorController(verifyCtx);
+      const responseData = verifyCtx.response.body as ResponseData;
+      assertEquals(verifyCtx.response.status, 200);
+      assertExists(responseData.data?.token);
+      assertExists(responseData.data?.user);
+    });
+
+    // Cleanup
+    await t.step("cleanup: delete test user and close connection", async () => {
+      await userService.deleteUser(
+        testUser.userId,
+        "Test123!@#$",
+        "Test123!@#$",
+        totp.generate(),
+      );
+      await closeDatabaseConnection();
+    });
+  },
+});
