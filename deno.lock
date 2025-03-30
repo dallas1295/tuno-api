@@ -4,7 +4,9 @@
     "jsr:@denosaurs/plug@^1.0.6": "1.0.6",
     "jsr:@felix/argon2@*": "2.0.2",
     "jsr:@felix/argon2@^2.0.2": "2.0.2",
+    "jsr:@hectorm/otpauth@*": "9.3.6",
     "jsr:@hectorm/otpauth@^9.3.6": "9.3.6",
+    "jsr:@iuioiua/redis@^1.1.1": "1.1.1",
     "jsr:@oak/commons@1": "1.0.0",
     "jsr:@oak/oak@^17.1.4": "17.1.4",
     "jsr:@openjs/denoqr@1": "1.0.0",
@@ -14,6 +16,8 @@
     "jsr:@std/assert@^1.0.11": "1.0.11",
     "jsr:@std/bytes@1": "1.0.5",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
+    "jsr:@std/bytes@^1.0.5": "1.0.5",
+    "jsr:@std/collections@^1.0.10": "1.0.10",
     "jsr:@std/crypto@1": "1.0.4",
     "jsr:@std/crypto@^1.0.3": "1.0.4",
     "jsr:@std/dotenv@*": "0.225.3",
@@ -28,12 +32,17 @@
     "jsr:@std/media-types@1": "1.1.0",
     "jsr:@std/path@0.221": "0.221.0",
     "jsr:@std/path@1": "1.0.8",
+    "npm:@opentelemetry/exporter-prometheus@*": "0.200.0_@opentelemetry+api@1.9.0",
+    "npm:@opentelemetry/exporter-prometheus@0.200": "0.200.0_@opentelemetry+api@1.9.0",
+    "npm:@opentelemetry/sdk-metrics@*": "2.0.0_@opentelemetry+api@1.9.0",
+    "npm:@opentelemetry/sdk-metrics@2": "2.0.0_@opentelemetry+api@1.9.0",
+    "npm:@types/node@*": "22.12.0",
     "npm:@types/node@^22.13.8": "22.13.8",
     "npm:mongodb@*": "6.14.0",
     "npm:mongodb@^6.14.0": "6.14.0",
+    "npm:opentelemetry@*": "0.1.0",
     "npm:opentelemetry@0.1": "0.1.0",
-    "npm:path-to-regexp@^6.3.0": "6.3.0",
-    "npm:redis@^4.7.0": "4.7.0_@redis+client@1.6.0"
+    "npm:path-to-regexp@^6.3.0": "6.3.0"
   },
   "jsr": {
     "@denosaurs/plug@1.0.6": {
@@ -53,6 +62,13 @@
     },
     "@hectorm/otpauth@9.3.6": {
       "integrity": "a1b88bdee6a7b4e208954d58b8c69561711f2e43b2f7ff4e07202e4a4c06219c"
+    },
+    "@iuioiua/redis@1.1.1": {
+      "integrity": "09b2490429e463af6202f8b86699e2e3d8ff02ca9a6bac41e220b6f790a63125",
+      "dependencies": [
+        "jsr:@std/bytes@^1.0.5",
+        "jsr:@std/collections"
+      ]
     },
     "@oak/commons@1.0.0": {
       "integrity": "49805b55603c3627a9d6235c0655aa2b6222d3036b3a13ff0380c16368f607ac",
@@ -94,6 +110,9 @@
     },
     "@std/bytes@1.0.5": {
       "integrity": "4465dd739d7963d964c809202ebea6d5c6b8e3829ef25c6a224290fbb8a1021e"
+    },
+    "@std/collections@1.0.10": {
+      "integrity": "903af106a3d92970d74e20f7ebff77d9658af9bef4403f1dc42a7801c0575899"
     },
     "@std/crypto@1.0.4": {
       "integrity": "cee245c453bd5366207f4d8aa25ea3e9c86cecad2be3fefcaa6cb17203d79340"
@@ -146,42 +165,48 @@
         "sparse-bitfield"
       ]
     },
-    "@redis/bloom@1.2.0_@redis+client@1.6.0": {
-      "integrity": "sha512-HG2DFjYKbpNmVXsa0keLHp/3leGJz1mjh09f2RLGGLQZzSHpkmZWuwJbAvo3QcRY8p80m5+ZdXZdYOSBLlp7Cg==",
+    "@opentelemetry/api@1.9.0": {
+      "integrity": "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="
+    },
+    "@opentelemetry/core@2.0.0_@opentelemetry+api@1.9.0": {
+      "integrity": "sha512-SLX36allrcnVaPYG3R78F/UZZsBsvbc7lMCLx37LyH5MJ1KAAZ2E3mW9OAD3zGz0G8q/BtoS5VUrjzDydhD6LQ==",
       "dependencies": [
-        "@redis/client"
+        "@opentelemetry/api",
+        "@opentelemetry/semantic-conventions"
       ]
     },
-    "@redis/client@1.6.0": {
-      "integrity": "sha512-aR0uffYI700OEEH4gYnitAnv3vzVGXCFvYfdpu/CJKvk4pHfLPEy/JSZyrpQ+15WhXe1yJRXLtfQ84s4mEXnPg==",
+    "@opentelemetry/exporter-prometheus@0.200.0_@opentelemetry+api@1.9.0": {
+      "integrity": "sha512-ZYdlU9r0USuuYppiDyU2VFRA0kFl855ylnb3N/2aOlXrbA4PMCznen7gmPbetGQu7pz8Jbaf4fwvrDnVdQQXSw==",
       "dependencies": [
-        "cluster-key-slot",
-        "generic-pool",
-        "yallist"
+        "@opentelemetry/api",
+        "@opentelemetry/core",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-metrics"
       ]
     },
-    "@redis/graph@1.1.1_@redis+client@1.6.0": {
-      "integrity": "sha512-FEMTcTHZozZciLRl6GiiIB4zGm5z5F3F6a6FZCyrfxdKOhFlGkiAqlexWMBzCi4DcRoyiOsuLfW+cjlGWyExOw==",
+    "@opentelemetry/resources@2.0.0_@opentelemetry+api@1.9.0": {
+      "integrity": "sha512-rnZr6dML2z4IARI4zPGQV4arDikF/9OXZQzrC01dLmn0CZxU5U5OLd/m1T7YkGRj5UitjeoCtg/zorlgMQcdTg==",
       "dependencies": [
-        "@redis/client"
+        "@opentelemetry/api",
+        "@opentelemetry/core",
+        "@opentelemetry/semantic-conventions"
       ]
     },
-    "@redis/json@1.0.7_@redis+client@1.6.0": {
-      "integrity": "sha512-6UyXfjVaTBTJtKNG4/9Z8PSpKE6XgSyEb8iwaqDcy+uKrd/DGYHTWkUdnQDyzm727V7p21WUMhsqz5oy65kPcQ==",
+    "@opentelemetry/sdk-metrics@2.0.0_@opentelemetry+api@1.9.0": {
+      "integrity": "sha512-Bvy8QDjO05umd0+j+gDeWcTaVa1/R2lDj/eOvjzpm8VQj1K1vVZJuyjThpV5/lSHyYW2JaHF2IQ7Z8twJFAhjA==",
       "dependencies": [
-        "@redis/client"
+        "@opentelemetry/api",
+        "@opentelemetry/core",
+        "@opentelemetry/resources"
       ]
     },
-    "@redis/search@1.2.0_@redis+client@1.6.0": {
-      "integrity": "sha512-tYoDBbtqOVigEDMAcTGsRlMycIIjwMCgD8eR2t0NANeQmgK/lvxNAvYyb6bZDD4frHRhIHkJu2TBRvB0ERkOmw==",
-      "dependencies": [
-        "@redis/client"
-      ]
+    "@opentelemetry/semantic-conventions@1.30.0": {
+      "integrity": "sha512-4VlGgo32k2EQ2wcCY3vEU28A0O13aOtHz3Xt2/2U5FAh9EfhD6t6DqL5Z6yAnRCntbTFDU4YfbpyzSlHNWycPw=="
     },
-    "@redis/time-series@1.1.0_@redis+client@1.6.0": {
-      "integrity": "sha512-c1Q99M5ljsIuc4YdaCwfUEXsofakb9c8+Zse2qxTadu8TalLXuAESzLvFAvNVbkmSlvlzIQOLpBCmWI9wTOt+g==",
+    "@types/node@22.12.0": {
+      "integrity": "sha512-Fll2FZ1riMjNmlmJOdAyY5pUbkftXslB5DgEzlIuNaiWhXd00FhWxVC/r4yV/4wBb9JfImTu+jiSvXTkJ7F/gA==",
       "dependencies": [
-        "@redis/client"
+        "undici-types"
       ]
     },
     "@types/node@22.13.8": {
@@ -201,12 +226,6 @@
     },
     "bson@6.10.3": {
       "integrity": "sha512-MTxGsqgYTwfshYWTRdmZRC+M7FnG1b4y7RO7p2k3X24Wq0yv1m77Wsj0BzlPzd/IowgESfsruQCUToa7vbOpPQ=="
-    },
-    "cluster-key-slot@1.1.2": {
-      "integrity": "sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA=="
-    },
-    "generic-pool@3.9.0": {
-      "integrity": "sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g=="
     },
     "memory-pager@1.5.0": {
       "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
@@ -235,17 +254,6 @@
     "punycode@2.3.1": {
       "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="
     },
-    "redis@4.7.0_@redis+client@1.6.0": {
-      "integrity": "sha512-zvmkHEAdGMn+hMRXuMBtu4Vo5P6rHQjLoHftu+lBqq8ZTA3RCVC/WzD790bkKKiNFp7d5/9PcSD19fJyyRvOdQ==",
-      "dependencies": [
-        "@redis/bloom",
-        "@redis/client",
-        "@redis/graph",
-        "@redis/json",
-        "@redis/search",
-        "@redis/time-series"
-      ]
-    },
     "sparse-bitfield@3.0.3": {
       "integrity": "sha512-kvzhi7vqKTfkh0PZU+2D2PIllw2ymqJKujUcyPMd9Y75Nv4nPbGJZXNhxsgdQab2BmlDct1YnfQCguEvHr7VsQ==",
       "dependencies": [
@@ -270,24 +278,23 @@
         "tr46",
         "webidl-conversions"
       ]
-    },
-    "yallist@4.0.0": {
-      "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
     }
   },
   "workspace": {
     "dependencies": [
       "jsr:@felix/argon2@^2.0.2",
       "jsr:@hectorm/otpauth@^9.3.6",
+      "jsr:@iuioiua/redis@^1.1.1",
       "jsr:@oak/oak@^17.1.4",
       "jsr:@openjs/denoqr@1",
       "jsr:@panva/jose@^6.0.10",
       "jsr:@std/assert@^1.0.11",
       "jsr:@std/dotenv@~0.225.3",
+      "npm:@opentelemetry/exporter-prometheus@0.200",
+      "npm:@opentelemetry/sdk-metrics@2",
       "npm:@types/node@^22.13.8",
       "npm:mongodb@^6.14.0",
-      "npm:opentelemetry@0.1",
-      "npm:redis@^4.7.0"
+      "npm:opentelemetry@0.1"
     ]
   }
 }
