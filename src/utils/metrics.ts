@@ -1,17 +1,19 @@
-import { MeterProvider } from "opentelemetry/api";
-import { PrometheusExporter } from "opentelemetry/exporter-prometheus";
+import { MeterProvider } from "npm:@opentelemetry/sdk-metrics";
+import { PrometheusExporter } from "npm:@opentelemetry/exporter-prometheus";
 
 const prometheusExporter = new PrometheusExporter({
   port: 9464,
   endpoint: "/metrics",
 });
+const meterProvider = new MeterProvider({
+  readers: [prometheusExporter],
+});
 
-const meter = new MeterProvider();
-meter.addMetricReader(prometheusExporter);
+const errorMeter = meterProvider.getMeter("error-meter");
+const dbMeter = meterProvider.getMeter("db-metrics");
+const httpMeter = meterProvider.getMeter("http-metrics");
 
-const dbMeter = meter.getMeter("db-metrics");
-
-export const ErrorCounter = dbMeter.createCounter("error_counter", {
+export const ErrorCounter = errorMeter.createCounter("error_counter", {
   description: "Number of api errors",
 });
 
@@ -23,7 +25,6 @@ export const ActiveConnections = dbMeter.createUpDownCounter(
 );
 
 export const DatabaseMetrics = {
-  // Track operation duration
   operationDuration: dbMeter.createHistogram(
     "db_operation_duration",
     {
@@ -32,7 +33,6 @@ export const DatabaseMetrics = {
     },
   ),
 
-  // Track number of active/ongoing DB operations
   activeOperations: dbMeter.createUpDownCounter(
     "db_active_operations",
     {
@@ -40,7 +40,6 @@ export const DatabaseMetrics = {
     },
   ),
 
-  // Track connection pool size
   connectionPoolSize: dbMeter.createUpDownCounter(
     "db_connection_pool_size",
     {
@@ -60,6 +59,57 @@ export const DatabaseMetrics = {
           collection,
         });
         this.activeOperations.add(-1, { operation, collection });
+      },
+    };
+  },
+};
+
+export const HTTPMetrics = {
+  requestsTotal: httpMeter.createCounter("http_requests_total", {
+    description: "Total number of HTTP requests",
+  }),
+
+  requestDuration: httpMeter.createHistogram("http_request_duration_seconds", {
+    description: "Duration of HTTP requests",
+    unit: "s",
+  }),
+
+  requestDistribution: httpMeter.createHistogram(
+    "http_request_distribution_seconds",
+    {
+      description: "Distribution of HTTP request durations",
+      unit: "s",
+    },
+  ),
+
+  activeRequests: httpMeter.createUpDownCounter("active_requests", {
+    description: "Current number of active HTTP requests",
+  }),
+
+  track(path: string, method: string) {
+    const startTime = performance.now();
+    this.activeRequests.add(1);
+
+    return {
+      end: (statusCode: number) => {
+        const duration = (performance.now() - startTime) / 1000; // Convert to seconds
+        this.activeRequests.add(-1);
+
+        this.requestsTotal.add(1, {
+          method,
+          path,
+          status: statusCode.toString(),
+        });
+
+        this.requestDuration.record(duration, {
+          method,
+          path,
+        });
+
+        this.requestDistribution.record(duration, {
+          path,
+          status_code: statusCode.toString(),
+        });
       },
     };
   },
