@@ -20,11 +20,11 @@ export class UserRepo {
       }
 
       const result = await this.collection.insertOne(user);
+      if (!result.acknowledged) {
+        throw new Error("Failed to insert user");
+      }
 
-      return {
-        ...user,
-        userId: result.insertedId.toString(),
-      };
+      return user;
     } catch (error) {
       ErrorCounter.add(1, {
         type: "database",
@@ -60,23 +60,8 @@ export class UserRepo {
   async findById(userId: string): Promise<User | null> {
     const timer = DatabaseMetrics.track("find", "users");
     try {
-      console.log(`Finding user with id: ${userId}`);
       const user = await this.collection.findOne(
         { userId: userId },
-        {
-          projection: {
-            userId: 1,
-            username: 1,
-            passwordHash: 1,
-            createdAt: 1,
-            lastEmailChange: 1,
-            lastPasswordChange: 1,
-            isActive: 1,
-            twoFactorSecret: 1,
-            twoFactorEnabled: 1,
-            recoveryCodes: 1,
-          },
-        },
       );
       if (!user) {
         console.log("User cannot be found (incorrect userId)");
