@@ -17,7 +17,7 @@ export interface DbConfig {
 export const dbConfig: DbConfig = {
   uri: `mongodb://${Deno.env.get("MONGO_USERNAME")}:${Deno.env.get(
     "MONGO_PASSWORD",
-  ) as string}@localhost:27017/?authSource=admin`,
+  ) as string}@localhost:27017/${Deno.env.get("MONGO_DB")}?authSource=admin`,
   maxPoolSize: parseInt(Deno.env.get("MONGO_MAX_POOL_SIZE") as string),
   minPoolSize: parseInt(Deno.env.get("MONGO_MIN_POOL_SIZE") as string),
   maxIdleTimeMS: parseInt(Deno.env.get("MONGO_MAX_CONN_IDLE_TIME") as string) *
