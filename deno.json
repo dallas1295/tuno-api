@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev": "deno run --allow-read --allow-env --allow-net --watch main.ts",
-    "test": "deno test --allow-read --allow-sys --allow-env --allow-net"
+    "test": "deno test --allow-all"
   },
   "imports": {
     "@felix/argon2": "jsr:@felix/argon2@^2.0.2",
