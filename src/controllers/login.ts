@@ -18,7 +18,7 @@ export async function loginController(ctx: Context) {
       return Response.badRequest(ctx, "Invalid Input");
     }
 
-    const userService = new UserService();
+    const userService = await UserService.initialize();
 
     const user = await userService.findByUsername(loginReq.username);
     if (!user) {
@@ -87,7 +87,7 @@ export async function verifyTwoFactorController(ctx: Context) {
       return Response.unauthorized(ctx, "Invalid or expired 2FA session");
     }
 
-    const userService = new UserService();
+    const userService = await UserService.initialize();
     const user = await userService.findByUsername(payload.username);
     if (!user) {
       return Response.unauthorized(ctx, "User not found");
