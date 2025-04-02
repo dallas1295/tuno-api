@@ -24,7 +24,7 @@ const createMockContext = (body: unknown): Context => ({
   request: {
     body: {
       value: body,
-      json: () => JSON.stringify(body),
+      json: () => Promise.resolve(body),
     },
   },
   response: new Response(),
@@ -121,6 +121,15 @@ Deno.test({
       const twoFactorSetup = await userService.enableTwoFactor(testUser.userId);
       assertExists(twoFactorSetup);
 
+      totp = new OTPAuth.TOTP({
+        issuer: "toNotes_test",
+        label: "toNotesAuth_test",
+        algorithm: "SHA512",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.URI.parse(twoFactorSetup.uri).secret,
+      });
+
       const ctx = createMockContext({
         username: "testuser",
         password: "Test123!@#$",
@@ -194,17 +203,16 @@ Deno.test({
         algorithm: "SHA512",
         digits: 6,
         period: 30,
-        secret: OTPAuth.Secret.fromBase32(twoFactorSetup.uri),
+        secret: OTPAuth.URI.parse(twoFactorSetup.uri).secret,
       });
-    });
-
-    await t.step("should return 400 for invalid input", async () => {
-      const ctx = createMockContext({});
-      await verifyTwoFactorController(ctx);
-      const responseData = ctx.response.body as ResponseData;
-      assertEquals(ctx.response.status, 400);
-      assertEquals(responseData.error, "Invalid input");
-    });
+    }),
+      await t.step("should return 400 for invalid input", async () => {
+        const ctx = createMockContext({});
+        await verifyTwoFactorController(ctx);
+        const responseData = ctx.response.body as ResponseData;
+        assertEquals(ctx.response.status, 400);
+        assertEquals(responseData.error, "Invalid input");
+      });
 
     await t.step("should return 400 for invalid TOTP code format", async () => {
       const ctx = createMockContext({
