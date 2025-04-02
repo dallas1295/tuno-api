@@ -24,7 +24,7 @@ const createMockContext = (body: unknown): Context => ({
   request: {
     body: {
       value: body,
-      json: () => body,
+      json: () => JSON.stringify(body),
     },
   },
   response: new Response(),
@@ -38,31 +38,40 @@ Deno.test({
   sanitizeOps: false,
 
   async fn(t) {
+    let userService: UserService;
+    let testUser: User;
+    let totp: OTPAuth.TOTP | undefined;
     // Setup: Initialize MongoDB connection
     await t.step("setup: initialize mongodb", async () => {
-      const client = await connectToDb();
-      const db = client.db();
-      await db.collection("users").deleteMany({});
+      try {
+        const client = await connectToDb();
+        await client.db().collection("users").deleteMany({});
+        userService = await UserService.initialize();
+      } catch (error) {
+        console.error("Connection failed aborting test");
+        throw error;
+      }
     });
-
-    const userService = new UserService();
-    let testUser: User;
 
     // Setup: Create a test user
     await t.step("setup: create test user", async () => {
-      testUser = await userService.createUser(
+      const createdUser = await userService.createUser(
         "testuser",
         "test@example.com",
         "Test123!@#$",
       );
-      assertExists(testUser);
+      assertExists(createdUser);
+      testUser = createdUser;
     });
 
     await t.step("should return 400 for missing credentials", async () => {
       const ctx = createMockContext({});
       await loginController(ctx);
       assertEquals(ctx.response.status, 400);
-      assertEquals((ctx.response as ResponseData).error, "Invalid Input");
+      assertEquals(
+        (ctx.response.body as ResponseData).error,
+        "Invalid Input",
+      );
     });
 
     await t.step("should return 401 for non-existent user", async () => {
@@ -72,7 +81,10 @@ Deno.test({
       });
       await loginController(ctx);
       assertEquals(ctx.response.status, 401);
-      assertEquals((ctx.response as ResponseData).error, "User doesn't exist");
+      assertEquals(
+        (ctx.response.body as ResponseData).error,
+        "User doesn't exist",
+      );
     });
 
     await t.step("should return 401 for invalid password", async () => {
@@ -82,7 +94,10 @@ Deno.test({
       });
       await loginController(ctx);
       assertEquals(ctx.response.status, 401);
-      assertEquals((ctx.response as ResponseData).error, "Invalid password");
+      assertEquals(
+        (ctx.response.body as ResponseData).error,
+        "Invalid password",
+      );
     });
 
     await t.step(
@@ -120,12 +135,15 @@ Deno.test({
 
     // Cleanup
     await t.step("cleanup: delete test user and close connection", async () => {
-      await userService.deleteUser(
-        testUser.userId,
-        "Test123!@#$",
-        "Test123!@#$",
-      );
-      await closeDatabaseConnection();
+      if (testUser) {
+        await userService.deleteUser(
+          testUser.userId,
+          "Test123!@#$",
+          "Test123!@#$",
+          totp ? totp.generate() : undefined,
+        );
+        await closeDatabaseConnection();
+      }
     });
   },
 });
@@ -138,12 +156,16 @@ Deno.test({
   async fn(t) {
     // Setup: Initialize MongoDB connection
     await t.step("setup: initialize mongodb", async () => {
-      const client = await connectToDb();
-      const db = client.db();
-      await db.collection("users").deleteMany({});
+      try {
+        const client = await connectToDb();
+        await client.db().collection("users").deleteMany({});
+      } catch (error) {
+        console.error("Connection failed aborting test");
+        throw error;
+      }
     });
 
-    const userService = new UserService();
+    let userService: UserService;
     let testUser: User;
     let twoFactorSetup: {
       enabled: boolean;
@@ -154,19 +176,25 @@ Deno.test({
 
     // Setup: Create a test user with 2FA enabled
     await t.step("setup: create test user with 2FA", async () => {
-      testUser = await userService.createUser(
+      userService = await UserService.initialize();
+      const createdUser = await userService.createUser(
         "testuser2fa",
         "test2fa@example.com",
         "Test123!@#$",
       );
+      assertExists(createdUser);
+      testUser = createdUser;
+
       twoFactorSetup = await userService.enableTwoFactor(testUser.userId);
       assertExists(twoFactorSetup);
 
       totp = new OTPAuth.TOTP({
-        secret: OTPAuth.Secret.fromBase32(twoFactorSetup.uri),
+        issuer: "toNotes_test",
+        label: "toNotesAuth_test",
         algorithm: "SHA512",
         digits: 6,
         period: 30,
+        secret: OTPAuth.Secret.fromBase32(twoFactorSetup.uri),
       });
     });
 
