@@ -5,19 +5,27 @@ import { ErrorCounter } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";
 import { hashPassword, verifyPassword } from "../services/passwordService.ts";
-import { MongoClient } from "mongodb";
+import { connectToDb } from "../config/db.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import * as denoqr from "@openjs/denoqr";
 import "@std/dotenv/load";
 
 export class UserService {
-  private userRepo: UserRepo;
+  private userRepo!: UserRepo;
 
-  constructor() {
-    const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
-    this.userRepo = new UserRepo(dbClient);
+  private constructor() {}
+
+  static async initialize(): Promise<UserService> {
+    const service = new UserService();
+    try {
+      const dbClient = await connectToDb();
+      service.userRepo = new UserRepo(dbClient);
+      return service;
+    } catch (error) {
+      console.error("Failed to initialize UserService: ", error);
+      throw error;
+    }
   }
-
   async createUser(
     username: string,
     email: string,
@@ -35,10 +43,9 @@ export class UserService {
       }
 
       const hashedPassword = await hashPassword(password);
-      const newId = crypto.randomUUID();
 
-      const user: User = {
-        userId: newId,
+      const newUser: User = {
+        userId: crypto.randomUUID(),
         username,
         passwordHash: hashedPassword,
         createdAt: new Date(),
@@ -46,7 +53,7 @@ export class UserService {
         twoFactorEnabled: false,
       };
 
-      const createdUser = await this.userRepo.createUser(user);
+      const createdUser = await this.userRepo.createUser(newUser);
       return createdUser;
     } catch (error) {
       ErrorCounter.add(1, {
