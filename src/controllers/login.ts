@@ -12,7 +12,7 @@ import * as OTPAuth from "@hectorm/otpauth";
 export async function loginController(ctx: Context) {
   HTTPMetrics.track("POST", "/login");
 
-  const loginReq = JSON.parse(await ctx.request.body.json()) as LoginRequest;
+  const loginReq = await ctx.request.body.json() as LoginRequest;
   try {
     if (!loginReq || !loginReq.username || !loginReq.password) {
       return Response.badRequest(ctx, "Invalid Input");
@@ -35,7 +35,7 @@ export async function loginController(ctx: Context) {
 
     if (user.twoFactorEnabled) {
       const temp = await tokenService.generateTempToken(
-        user.userId,
+        user.username,
         "5m",
       );
       return Response.success(ctx, {
@@ -69,9 +69,12 @@ export async function verifyTwoFactorController(ctx: Context) {
 
   try {
     const body = await ctx.request.body.json();
+    if (!body) {
+      return Response.badRequest(ctx, "Invalid input");
+    }
+
     if (
-      !body || typeof body.tempToken !== "string" ||
-      typeof body.totpCode !== "string"
+      typeof body.tempToken !== "string" || typeof body.totpCode !== "string"
     ) {
       return Response.badRequest(ctx, "Invalid input");
     }
@@ -83,7 +86,7 @@ export async function verifyTwoFactorController(ctx: Context) {
     }
 
     const payload = await tokenService.verifyTempToken(tempToken);
-    if (!payload || payload.type !== "verify-2fa") {
+    if (!payload || payload.type !== "temp" || !payload.username) {
       return Response.unauthorized(ctx, "Invalid or expired 2FA session");
     }
 
