@@ -127,12 +127,12 @@ export const tokenService = {
     }
   },
   generateTempToken: async (
-    userId: string,
+    username: string,
     expiry: string,
   ): Promise<string> => {
     try {
       const tempToken = await new SignJWT({
-        userId,
+        username,
         type: "temp",
       })
         .setProtectedHeader({ alg: "HS256" })
@@ -158,7 +158,7 @@ export const tokenService = {
         audience: tokenConfig.audience,
       });
 
-      if (!payload.temp) {
+      if (payload.type !== "temp") {
         throw new Error("Invalid temporary token");
       }
 
