@@ -1,4 +1,4 @@
-import { tokenService } from "../services/tokenService.ts";
+import { tokenService } from "../services/token.ts";
 import { Response } from "../utils/response.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
 import { Context } from "@oak/oak";
@@ -28,7 +28,7 @@ export async function logout(ctx: Context) {
       { token: refreshToken, type: "refresh" },
     ]);
 
-    // ... rest of logout logic
+    return Response.success(ctx, { message: "Successfully logged out" });
   } catch (error) {
     return Response.internalError(
       ctx,
