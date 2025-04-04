@@ -1,10 +1,10 @@
-import { User, UserProfile } from "../models/userModel.ts";
-import { UserRepo } from "../repositories/userRepo.ts";
+import { User, UserProfile } from "../models/user.ts";
+import { UserRepo } from "../repositories/user.ts";
 import { validateEmail, validatePassword } from "../utils/validators.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";
-import { hashPassword, verifyPassword } from "../services/passwordService.ts";
+import { hashPassword, verifyPassword } from "../services/password.ts";
 import { connectToDb } from "../config/db.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import * as denoqr from "@openjs/denoqr";

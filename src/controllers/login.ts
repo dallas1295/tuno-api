@@ -1,14 +1,14 @@
 import { HTTPMetrics } from "../utils/metrics.ts";
 import { Response } from "../utils/response.ts";
-import { LoginRequest } from "../models/userModel.ts";
+import { LoginRequest } from "../models/user.ts";
 import { toUserResponse } from "../dto/user.ts";
-import { verifyPassword } from "../services/passwordService.ts";
-import { tokenService } from "../services/tokenService.ts";
+import { verifyPassword } from "../services/password.ts";
+import { tokenService } from "../services/token.ts";
 import { verifyTOTP } from "../utils/totp.ts";
-import { UserService } from "../services/userService.ts";
+import { UserService } from "../services/user.ts";
+import { RateLimiter } from "../utils/rateLimiter.ts";
 import { Context } from "@oak/oak";
 import * as OTPAuth from "@hectorm/otpauth";
-import { RateLimiter } from "../utils/rateLimiter.ts";
 
 export async function login(ctx: Context) {
   HTTPMetrics.track("POST", "/login");

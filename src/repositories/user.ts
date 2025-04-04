@@ -1,5 +1,5 @@
 import { Collection, MongoClient } from "mongodb";
-import { User } from "../models/userModel.ts";
+import { User } from "../models/user.ts";
 import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 

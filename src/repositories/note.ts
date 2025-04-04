@@ -5,7 +5,7 @@ import {
   MongoClient,
   UpdateFilter,
 } from "mongodb";
-import { Note } from "../models/noteModel.ts";
+import { Note } from "../models/note.ts";
 import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 

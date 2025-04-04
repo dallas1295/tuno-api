@@ -1,4 +1,4 @@
-import { RateLimitInfo, RedisManager } from "../services/redisService.ts";
+import { RateLimitInfo, RedisManager } from "../services/redis.ts";
 
 export class RateLimiter {
   private static readonly MAX_ATTEMPTS = 5;

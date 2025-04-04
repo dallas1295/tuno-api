@@ -1,5 +1,5 @@
-import { Note } from "../models/noteModel.ts";
-import { NoteRepo } from "../repositories/noteRepo.ts";
+import { Note } from "../models/note.ts";
+import { NoteRepo } from "../repositories/note.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
 import { MongoClient, UpdateFilter } from "mongodb";
 import "@std/dotenv/load";

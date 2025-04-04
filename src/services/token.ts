@@ -1,6 +1,6 @@
 import { JWTPayload, jwtVerify, SignJWT } from "@panva/jose";
-import { User } from "../models/userModel.ts";
-import { RedisManager } from "./redisService.ts";
+import { User } from "../models/user.ts";
+import { RedisManager } from "./redis.ts";
 import { secretKey, tokenConfig, TokenPair } from "../utils/token.ts";
 import "@std/dotenv/load";
 

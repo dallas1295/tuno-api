@@ -1,9 +1,9 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
-import { User } from "../src/models/userModel.ts";
+import { User } from "../src/models/user.ts";
 import { login, verifyTwoFactorController } from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
-import { UserService } from "../src/services/userService.ts";
+import { UserService } from "../src/services/user.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
 

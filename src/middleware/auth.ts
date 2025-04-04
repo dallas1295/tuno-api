@@ -1,5 +1,5 @@
 import { validateEmail, validatePassword } from "../utils/validators.ts";
-import { tokenService } from "../services/tokenService.ts";
+import { tokenService } from "../services/token.ts";
 import { Response } from "../utils/response.ts";
 import * as jose from "@panva/jose";
 import { Context, Next } from "@oak/oak";

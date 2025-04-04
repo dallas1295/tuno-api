@@ -1,5 +1,5 @@
-import { Priority, Todo } from "../models/todoModel.ts";
-import { TodoRepo } from "../repositories/todoRepo.ts";
+import { Priority, Todo } from "../models/todo.ts";
+import { TodoRepo } from "../repositories/todo.ts";
 import {
   validatePriority,
   validateRecurringPattern,

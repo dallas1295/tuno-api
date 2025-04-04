@@ -1,5 +1,5 @@
-import { UserProfile } from "../dto/user.ts";
-import { UserService } from "../services/userService.ts";
+import { toUserProfile } from "../dto/user.ts";
+import { UserService } from "../services/user.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
 
@@ -17,7 +17,7 @@ export async function getProfile(ctx: Context) {
       return Response.unauthorized(ctx, "User not found");
     }
 
-    const profile: UserProfile = {
+    const profile: toUserProfile = {
       username: user.username,
       email: user.email,
       createdAt: user.createdAt,

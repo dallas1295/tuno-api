@@ -1,4 +1,4 @@
-import { User } from "../models/userModel.ts";
+import { User } from "../models/user.ts";
 
 interface UserLink {
   href: string;
@@ -12,7 +12,7 @@ export interface UserResponse {
   links: { [key: string]: UserLink };
 }
 
-export interface UserProfile {
+export interface toUserProfile {
   username: string;
   email: string;
   createdAt: Date;

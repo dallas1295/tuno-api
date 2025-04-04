@@ -1,5 +1,5 @@
 import { Collection, MongoClient } from "mongodb";
-import { Todo } from "../models/todoModel.ts";
+import { Todo } from "../models/todo.ts";
 import { DatabaseMetrics, ErrorCounter } from "../utils/metrics.ts";
 import "@std/dotenv/load";
 

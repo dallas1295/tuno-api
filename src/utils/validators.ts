@@ -1,4 +1,4 @@
-import { Pattern, Priority } from "../models/todoModel.ts";
+import { Pattern, Priority } from "../models/todo.ts";
 
 export function validatePassword(password: string): Promise<boolean> {
   // Password must:
