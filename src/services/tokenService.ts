@@ -89,19 +89,22 @@ export const tokenService = {
   },
 
   blacklistToken: async (
-    token: string,
-    tokenType: "access" | "refresh",
+    tokens: Array<{ token: string; type: "access" | "refresh" }>,
   ): Promise<void> => {
     try {
-      const { payload } = await jwtVerify(token, secretKey);
-      if (payload.exp) {
-        const keyRedis = `blacklist:${tokenType}:${token}`;
-        const timeDiff = payload.exp - Math.floor(Date.now() / 1000);
-        await RedisManager.setex(keyRedis, timeDiff, "true");
-      }
+      await Promise.all(
+        tokens.map(async ({ token, type }) => {
+          const { payload } = await jwtVerify(token, secretKey);
+          if (payload.exp) {
+            const keyRedis = `blacklist:${type}:${token}`;
+            const timeDiff = payload.exp - Math.floor(Date.now() / 1000);
+            await RedisManager.setex(keyRedis, timeDiff, "true");
+          }
+        }),
+      );
     } catch (error) {
-      console.error("Error blacklisting token:", error);
-      throw new Error("Failed to blacklist token");
+      console.error("Error blacklisting tokens:", error);
+      throw new Error("Failed to blacklist tokens");
     }
   },
 
@@ -115,7 +118,7 @@ export const tokenService = {
       throw new Error("Failed to check token blacklist");
     }
   },
-
+  // blacklisting for account deletion
   blacklistUserTokens: async (userId: string): Promise<void> => {
     try {
       const pattern = `blacklist:*:${userId}:*`;
