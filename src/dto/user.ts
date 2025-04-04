@@ -12,6 +12,13 @@ export interface UserResponse {
   links: { [key: string]: UserLink };
 }
 
+export interface UserProfile {
+  username: string;
+  email: string;
+  createdAt: Date;
+  links: { [key: string]: UserLink };
+}
+
 export function toUserResponse(
   user: User,
   links: { [key: string]: UserLink },

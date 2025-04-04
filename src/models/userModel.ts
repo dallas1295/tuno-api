@@ -17,9 +17,3 @@ export interface LoginRequest {
   password: string;
   twoFactorCode?: string;
 }
-
-export interface UserProfile {
-  username: string;
-  email: string;
-  createdAt: Date;
-}
