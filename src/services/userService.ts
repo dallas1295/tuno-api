@@ -65,15 +65,15 @@ export class UserService {
     }
   }
 
-  async getProfile(username: string): Promise<UserProfile> {
+  async getProfile(userId: string): Promise<UserProfile> {
     try {
-      const exists = await this.userRepo.findByUsername(username);
+      const exists = await this.userRepo.findById(userId);
       if (!exists) {
         throw new Error("User not found");
       }
 
-      const userProfile = {
-        username: username,
+      const userProfile: UserProfile = {
+        username: exists.username,
         email: exists.email,
         createdAt: exists.createdAt,
       };
@@ -135,6 +135,19 @@ export class UserService {
         operation: "change_password",
       });
       console.error("Error changing password");
+      throw error;
+    }
+  }
+
+  async findById(userId: string): Promise<User | null> {
+    try {
+      return await this.userRepo.findById(userId);
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "UserService",
+        operation: "find_by_id",
+      });
+      console.error("Error finding user by id");
       throw error;
     }
   }
