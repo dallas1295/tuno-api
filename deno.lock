@@ -40,8 +40,6 @@
     "npm:@types/node@^22.13.8": "22.13.8",
     "npm:mongodb@*": "6.14.0",
     "npm:mongodb@^6.14.0": "6.14.0",
-    "npm:opentelemetry@*": "0.1.0",
-    "npm:opentelemetry@0.1": "0.1.0",
     "npm:path-to-regexp@^6.3.0": "6.3.0"
   },
   "jsr": {
@@ -245,9 +243,6 @@
         "mongodb-connection-string-url"
       ]
     },
-    "opentelemetry@0.1.0": {
-      "integrity": "sha512-8w5sK99P1ZG25WIvHvIa0mSyQ96hl08VQ+1SUrnSg68O85P9ZqjtRwipAftaJW+QvoxxrK7S+Zu9KOqOA+lNhg=="
-    },
     "path-to-regexp@6.3.0": {
       "integrity": "sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ=="
     },
@@ -293,8 +288,7 @@
       "npm:@opentelemetry/exporter-prometheus@0.200",
       "npm:@opentelemetry/sdk-metrics@2",
       "npm:@types/node@^22.13.8",
-      "npm:mongodb@^6.14.0",
-      "npm:opentelemetry@0.1"
+      "npm:mongodb@^6.14.0"
     ]
   }
 }
