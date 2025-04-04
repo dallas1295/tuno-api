@@ -1,6 +1,13 @@
 import { RedisClient } from "@iuioiua/redis";
 import "@std/dotenv/load";
 
+export interface RateLimitInfo {
+  attempts: number;
+  firstAttempt: number;
+  lastAttempt: number;
+  blocked: boolean;
+}
+
 const redisPort = await Deno.connect({ port: 6379 });
 const client = new RedisClient(redisPort);
 
@@ -56,6 +63,35 @@ export class RedisManager {
       return reply === "OK";
     } catch (error) {
       console.error(`Redis SETEX failed for key ${key}: `, error);
+      return false;
+    }
+  }
+
+  public static async getRateLimit(key: string): Promise<RateLimitInfo | null> {
+    try {
+      const reply = await this.client.sendCommand(["GET", key]);
+      return reply ? JSON.parse(reply as string) : null;
+    } catch (error) {
+      console.error(`Redis GET failed for rate limit key ${key}:`, error);
+      return null;
+    }
+  }
+
+  public static async setRateLimit(
+    key: string,
+    info: RateLimitInfo,
+    seconds: number,
+  ): Promise<boolean> {
+    try {
+      const reply = await this.client.sendCommand([
+        "SETEX",
+        key,
+        seconds.toString(),
+        JSON.stringify(info),
+      ]);
+      return reply === "OK";
+    } catch (error) {
+      console.error(`Redis SETEX failed for rate limit key ${key}:`, error);
       return false;
     }
   }
