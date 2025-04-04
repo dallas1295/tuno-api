@@ -1,4 +1,3 @@
-import { toUserProfile } from "../dto/user.ts";
 import { UserService } from "../services/user.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
@@ -17,10 +16,10 @@ export async function getProfile(ctx: Context) {
       return Response.unauthorized(ctx, "User not found");
     }
 
-    const profile: toUserProfile = {
-      username: user.username,
-      email: user.email,
-      createdAt: user.createdAt,
+    const userData = await userService.getProfile(user.userId);
+
+    const profile = {
+      ...userData,
       links: {
         self: { href: `/users/${user.userId}/profile`, method: "GET" },
         changeEmail: { href: `/users/${user.userId}/email`, method: "PUT" },
@@ -32,6 +31,7 @@ export async function getProfile(ctx: Context) {
           href: `/users/${user.userId}/username`,
           method: "PUT",
         },
+        logout: { href: `/api/auth/logout` },
       },
     };
 
