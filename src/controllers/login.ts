@@ -8,8 +8,9 @@ import { verifyTOTP } from "../utils/totp.ts";
 import { UserService } from "../services/userService.ts";
 import { Context } from "@oak/oak";
 import * as OTPAuth from "@hectorm/otpauth";
+import { RateLimiter } from "../utils/rateLimiter.ts";
 
-export async function loginController(ctx: Context) {
+export async function login(ctx: Context) {
   HTTPMetrics.track("POST", "/login");
 
   const loginReq = await ctx.request.body.json() as LoginRequest;
@@ -18,10 +19,18 @@ export async function loginController(ctx: Context) {
       return Response.badRequest(ctx, "Invalid Input");
     }
 
+    if (await RateLimiter.isRateLimited(ctx.request.ip, loginReq.username)) {
+      return Response.tooManyRequests(
+        ctx,
+        "Too many login attempts. Please try again later.",
+      );
+    }
+
     const userService = await UserService.initialize();
 
     const user = await userService.findByUsername(loginReq.username);
     if (!user) {
+      await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
       return Response.unauthorized(ctx, "User doesn't exist");
     }
 
@@ -30,12 +39,15 @@ export async function loginController(ctx: Context) {
       loginReq.password,
     );
     if (!checkPassword) {
+      await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
       return Response.unauthorized(ctx, "Invalid password");
     }
 
+    await RateLimiter.resetAttempts(ctx.request.ip, loginReq.username);
+
     if (user.twoFactorEnabled) {
       const temp = await tokenService.generateTempToken(
-        user.username,
+        user.userId,
         "5m",
       );
       return Response.success(ctx, {
@@ -47,7 +59,7 @@ export async function loginController(ctx: Context) {
 
     const token = await tokenService.generateTokenPair(user);
     const links = {
-      self: { href: `/users/${user.username}`, method: "GET" },
+      self: { href: `/users/${user.userId}`, method: "GET" },
       logout: { href: "/auth/logout", method: "POST" },
     };
     const userResponse = toUserResponse(user, links);
@@ -85,14 +97,24 @@ export async function verifyTwoFactorController(ctx: Context) {
       return Response.badRequest(ctx, "Invalid TOTP code format");
     }
 
+    // Check rate limiting for 2FA attempts
+    if (await RateLimiter.isRateLimited(ctx.request.ip)) {
+      return Response.tooManyRequests(
+        ctx,
+        "Too many 2FA attempts. Please try again later.",
+      );
+    }
+
     const payload = await tokenService.verifyTempToken(tempToken);
-    if (!payload || payload.type !== "temp" || !payload.username) {
+    if (!payload || payload.type !== "temp" || !payload.userId) {
+      await RateLimiter.trackAttempt(ctx.request.ip);
       return Response.unauthorized(ctx, "Invalid or expired 2FA session");
     }
 
     const userService = await UserService.initialize();
-    const user = await userService.findByUsername(payload.username);
+    const user = await userService.findById(payload.userId);
     if (!user) {
+      await RateLimiter.trackAttempt(ctx.request.ip);
       return Response.unauthorized(ctx, "User not found");
     }
 
@@ -101,8 +123,12 @@ export async function verifyTwoFactorController(ctx: Context) {
       totpCode,
     );
     if (!isValidTotp) {
+      await RateLimiter.trackAttempt(ctx.request.ip);
       return Response.unauthorized(ctx, "Invalid 2FA code");
     }
+
+    // Reset rate limiting on successful 2FA
+    await RateLimiter.resetAttempts(ctx.request.ip);
 
     const token = await tokenService.generateTokenPair(user);
     const links = {
