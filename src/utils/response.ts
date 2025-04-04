@@ -51,6 +51,13 @@ export class Response {
     };
   }
 
+  static tooManyRequests(ctx: Context, message: string) {
+    ctx.response.status = 429;
+    ctx.response.body = {
+      error: message,
+    };
+  }
+
   static internalError(ctx: Context, message: string) {
     ctx.response.status = 500;
     ctx.response.body = {
