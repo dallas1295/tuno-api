@@ -132,7 +132,7 @@ export async function verifyTwoFactorController(ctx: Context) {
 
     const token = await tokenService.generateTokenPair(user);
     const links = {
-      self: { href: `/users/${user.username}`, method: "GET" },
+      self: { href: `/users/${user.userId}`, method: "GET" },
       logout: { href: "/auth/logout", method: "POST" },
     };
 
