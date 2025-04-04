@@ -1,10 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
 import { User } from "../src/models/userModel.ts";
-import {
-  loginController,
-  verifyTwoFactorController,
-} from "../src/controllers/login.ts";
+import { login, verifyTwoFactorController } from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
 import { UserService } from "../src/services/userService.ts";
 import * as OTPAuth from "@hectorm/otpauth";
@@ -66,7 +63,7 @@ Deno.test({
 
     await t.step("should return 400 for missing credentials", async () => {
       const ctx = createMockContext({});
-      await loginController(ctx);
+      await login(ctx);
       assertEquals(ctx.response.status, 400);
       assertEquals(
         (ctx.response.body as ResponseData).error,
@@ -79,7 +76,7 @@ Deno.test({
         username: "nonexistent",
         password: "Test123!@#$",
       });
-      await loginController(ctx);
+      await login(ctx);
       assertEquals(ctx.response.status, 401);
       assertEquals(
         (ctx.response.body as ResponseData).error,
@@ -92,7 +89,7 @@ Deno.test({
         username: "testuser",
         password: "wrongpassword",
       });
-      await loginController(ctx);
+      await login(ctx);
       assertEquals(ctx.response.status, 401);
       assertEquals(
         (ctx.response.body as ResponseData).error,
@@ -107,7 +104,7 @@ Deno.test({
           username: "testuser",
           password: "Test123!@#$",
         });
-        await loginController(ctx);
+        await login(ctx);
         const responseData = ctx.response.body as ResponseData;
         assertEquals(ctx.response.status, 200);
         assertExists(responseData.data?.token);
@@ -135,7 +132,7 @@ Deno.test({
         password: "Test123!@#$",
       });
 
-      await loginController(ctx);
+      await login(ctx);
       const responseData = ctx.response.body as ResponseData;
       assertEquals(ctx.response.status, 200);
       assertEquals(responseData.data?.requireTwoFactor, true);
@@ -231,7 +228,7 @@ Deno.test({
         username: "testuser2fa",
         password: "Test123!@#$",
       });
-      await loginController(loginCtx);
+      await login(loginCtx);
       const loginResponseData = loginCtx.response.body as ResponseData;
 
       const verifyCtx = createMockContext({
