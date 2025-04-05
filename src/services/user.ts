@@ -9,7 +9,7 @@ import { connectToDb } from "../config/db.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import * as denoqr from "@openjs/denoqr";
 import "@std/dotenv/load";
-import { RateLimitChange } from "../utils/rateLimiter.ts";
+import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 
 export class UserService {
   private userRepo!: UserRepo;
@@ -93,12 +93,24 @@ export class UserService {
     userId: string,
     newPassword: string,
     oldPassword: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const exists = await this.userRepo.findById(userId);
 
       if (!exists) {
         throw new Error("User not found");
+      }
+
+      if (exists.lastPasswordChange) {
+        const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+        const timeSinceChange = Date.now() -
+          exists.lastPasswordChange.getTime();
+        const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
+
+        if (timeRemaining > 0) {
+          const nextAllowed = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+          throw new ChangeRateLimit(nextAllowed);
+        }
       }
 
       if (!await verifyPassword(exists.passwordHash, oldPassword)) {
@@ -109,27 +121,18 @@ export class UserService {
         );
       }
 
-      if (exists.lastPasswordChange) {
-        const twoWeeks = 14 * 24 * 60 * 60 * 1000;
-        const timeSinceChange = Date.now() -
-          exists.lastPasswordChange.getTime();
-        const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
-
-        if (timeRemaining > 0) {
-          throw new Error(
-            `Password can only be changed every 2 weeks. Time remaining: ${
-              Math.ceil(timeRemaining / (24 * 60 * 60 * 1000))
-            } days`,
-          );
-        }
-      }
-
       const hashedPassword = await hashPassword(newPassword);
 
-      await this.userRepo.updateUserPassword(
+      const result = await this.userRepo.updateUserPassword(
         userId,
         hashedPassword,
       );
+
+      if (!result) {
+        return false;
+      }
+
+      return true;
     } catch (error) {
       ErrorCounter.add(1, {
         type: "UserService",
@@ -232,7 +235,7 @@ export class UserService {
 
         if (timeRemaining > 0) {
           const nextAllowed = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
-          throw new RateLimitChange(nextAllowed);
+          throw new ChangeRateLimit(nextAllowed);
         }
       }
 
