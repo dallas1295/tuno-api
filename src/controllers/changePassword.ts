@@ -1,0 +1,64 @@
+import { UserService } from "../services/user.ts";
+import { Response } from "../utils/response.ts";
+import { ChangePasswordRequest } from "../models/user.ts";
+import { ChangeRateLimit } from "../utils/rateLimiter.ts";
+import { Context } from "@oak/oak";
+
+export async function changePassword(ctx: Context) {
+  const userId = ctx.state?.user?.userId;
+  if (!userId) {
+    return Response.unauthorized(ctx, "Missing or invalid Token");
+  }
+
+  try {
+    const body = await ctx.request.body.json();
+    const req: ChangePasswordRequest = {
+      oldPassword: body.oldPassword?.trim(),
+      newPassword: body.newPassword?.trim(),
+    };
+
+    if (!req.newPassword || !req.oldPassword) {
+      return Response.badRequest(
+        ctx,
+        "new or existing password not provided",
+      );
+    }
+
+    const userService = await UserService.initialize();
+    const user = await userService.findById(userId);
+
+    if (!user) {
+      return Response.unauthorized(ctx, "User not found");
+    }
+
+    if (!req.newPassword || !req.oldPassword) {
+      return Response.badRequest(ctx, "new or existing password not provided");
+    }
+
+    if (req.newPassword === req.oldPassword) {
+      return Response.badRequest(ctx, "failed to provide a new password");
+    }
+
+    const update = await userService.changePassword(
+      user.userId,
+      req.newPassword,
+      req.oldPassword,
+    );
+    if (!update) {
+      return Response.internalError(ctx, "Failed to update password");
+    }
+
+    return Response.success(ctx, "Password successfully updated");
+  } catch (error) {
+    if (error instanceof ChangeRateLimit) {
+      return Response.tooManyRequests(
+        ctx,
+        `Trying to update too frequently: ${error.daysUntil}`,
+      );
+    }
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Error updating password",
+    );
+  }
+}
