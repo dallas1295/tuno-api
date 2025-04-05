@@ -17,7 +17,7 @@ export async function changeEmail(ctx: Context) {
     };
 
     if (!req.newEmail) {
-      return Response.badRequest(ctx, "Could not find new email");
+      return Response.badRequest(ctx, "New email not provided");
     }
     const userService = await UserService.initialize();
 
