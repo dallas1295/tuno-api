@@ -9,6 +9,7 @@ import { connectToDb } from "../config/db.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import * as denoqr from "@openjs/denoqr";
 import "@std/dotenv/load";
+import { RateLimitChange } from "../utils/rateLimiter.ts";
 
 export class UserService {
   private userRepo!: UserRepo;
@@ -223,10 +224,6 @@ export class UserService {
         throw new Error("User not found");
       }
 
-      if (exists.email.trim() === newEmail.trim()) {
-        throw new Error("You are already using this email");
-      }
-
       if (exists.lastEmailChange) {
         const twoWeeks = 14 * 24 * 60 * 60 * 1000;
         const timeSinceChange = Date.now() -
@@ -234,12 +231,13 @@ export class UserService {
         const timeRemaining = Math.max(0, twoWeeks - timeSinceChange);
 
         if (timeRemaining > 0) {
-          throw new Error(
-            `Email can only be changed every 2 weeks. Time remaining: ${
-              Math.ceil(timeRemaining / (24 * 60 * 60 * 1000))
-            } days`,
-          );
+          const nextAllowed = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+          throw new RateLimitChange(nextAllowed);
         }
+      }
+
+      if (exists.email.trim() === newEmail.trim()) {
+        throw new Error("You are already using this email");
       }
 
       if (!validateEmail(newEmail)) {
