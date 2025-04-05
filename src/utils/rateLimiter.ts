@@ -1,5 +1,14 @@
 import { RateLimitInfo, RedisManager } from "../services/redis.ts";
 
+export class ChangeRateLimit extends Error {
+  daysUntil: number;
+
+  constructor(nextAllowed: number) {
+    super("Rate limit exceeded");
+    this.daysUntil = nextAllowed;
+  }
+}
+
 export class RateLimiter {
   private static readonly MAX_ATTEMPTS = 5;
   private static readonly BLOCK_DURATION = 900; // 15 minutes
