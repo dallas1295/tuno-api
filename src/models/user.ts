@@ -22,6 +22,11 @@ export interface ChangeEmailRequest {
   newEmail: string;
 }
 
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export interface UserProfile {
   username: string;
   email: string;
