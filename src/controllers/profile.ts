@@ -6,7 +6,7 @@ export async function getProfile(ctx: Context) {
   try {
     const userId = ctx.state.user?.userId;
     if (!userId) {
-      return Response.unauthorized(ctx, "User Id not found");
+      return Response.unauthorized(ctx, "Missing or invalid Token");
     }
 
     const userService = await UserService.initialize();
