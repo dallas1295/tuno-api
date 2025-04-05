@@ -1,8 +1,11 @@
 import { UserService } from "../services/user.ts";
+import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
 
 export async function getProfile(ctx: Context) {
+  HTTPMetrics.track("GET", "/profile");
+
   try {
     const userId = ctx.state.user?.userId;
     if (!userId) {
@@ -37,6 +40,10 @@ export async function getProfile(ctx: Context) {
 
     return Response.success(ctx, profile);
   } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "get_profile",
+    });
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error fetching profile",

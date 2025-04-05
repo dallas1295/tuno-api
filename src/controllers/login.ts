@@ -1,4 +1,4 @@
-import { HTTPMetrics } from "../utils/metrics.ts";
+import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { Response } from "../utils/response.ts";
 import { LoginRequest } from "../models/user.ts";
 import { toUserResponse } from "../dto/user.ts";
@@ -69,6 +69,10 @@ export async function login(ctx: Context) {
       user: userResponse,
     });
   } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "login",
+    });
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error logging in",

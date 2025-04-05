@@ -3,10 +3,17 @@ import { Response } from "../utils/response.ts";
 import { ChangePasswordRequest } from "../models/user.ts";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 import { Context } from "@oak/oak";
+import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 
 export async function changePassword(ctx: Context) {
+  HTTPMetrics.track("PUT", "/change-password");
+
   const userId = ctx.state?.user?.userId;
   if (!userId) {
+    ErrorCounter.add(1, {
+      type: "auth",
+      operation: "change_password_unauthorized",
+    });
     return Response.unauthorized(ctx, "Missing or invalid Token");
   }
 
@@ -51,11 +58,19 @@ export async function changePassword(ctx: Context) {
     return Response.success(ctx, "Password successfully updated");
   } catch (error) {
     if (error instanceof ChangeRateLimit) {
+      ErrorCounter.add(1, {
+        type: "rate_limit",
+        operation: "change_password",
+      });
       return Response.tooManyRequests(
         ctx,
         `Trying to update too frequently: ${error.daysUntil}`,
       );
     }
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "change_password",
+    });
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error updating password",
