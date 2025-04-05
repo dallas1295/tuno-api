@@ -18,6 +18,10 @@ export interface LoginRequest {
   twoFactorCode?: string;
 }
 
+export interface ChangeEmailRequest {
+  newEmail: string;
+}
+
 export interface UserProfile {
   username: string;
   email: string;
