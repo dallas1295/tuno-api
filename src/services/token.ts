@@ -130,12 +130,12 @@ export const tokenService = {
     }
   },
   generateTempToken: async (
-    username: string,
+    userId: string,
     expiry: string,
   ): Promise<string> => {
     try {
       const tempToken = await new SignJWT({
-        username,
+        userId,
         type: "temp",
       })
         .setProtectedHeader({ alg: "HS256" })
