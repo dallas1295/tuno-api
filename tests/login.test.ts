@@ -223,35 +223,41 @@ Deno.test({
     });
 
     await t.step("should verify valid 2FA code", async () => {
+      // Debug: Verify user exists
+      const dbUser = await userService.findByUsername("testuser2fa");
+      console.log("DB User:", dbUser);
+      assertExists(dbUser, "User should exist in database");
+
       // Generate a valid temp token first
       const loginCtx = createMockContext({
         username: "testuser2fa",
         password: "Test123!@#$",
       });
+
       await login(loginCtx);
       const loginResponseData = loginCtx.response.body as ResponseData;
 
+      // Debug: Check login response
+      console.log("Login Response:", loginResponseData);
+      assertExists(loginResponseData.data?.tempToken, "Should have temp token");
+
+      const totpCode = totp.generate();
+      console.log("Generated TOTP:", totpCode);
+
       const verifyCtx = createMockContext({
         tempToken: loginResponseData.data?.tempToken,
-        totpCode: totp.generate(),
+        totpCode: totpCode,
       });
 
       await verifyTwoFactorController(verifyCtx);
       const responseData = verifyCtx.response.body as ResponseData;
+
+      // Debug: Check verification response
+      console.log("Verify Response:", responseData);
+
       assertEquals(verifyCtx.response.status, 200);
       assertExists(responseData.data?.token);
       assertExists(responseData.data?.user);
-    });
-
-    // Cleanup
-    await t.step("cleanup: delete test user and close connection", async () => {
-      await userService.deleteUser(
-        testUser.userId,
-        "Test123!@#$",
-        "Test123!@#$",
-        totp.generate(),
-      );
-      await closeDatabaseConnection();
     });
   },
 });
