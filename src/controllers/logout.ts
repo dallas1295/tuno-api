@@ -30,7 +30,9 @@ export async function logout(ctx: Context) {
       { token: refreshToken, type: "refresh" },
     ]);
 
-    return Response.success(ctx, { message: "Successfully logged out" });
+    return Response.success(ctx, {
+      data: { message: "Successfully logged out" },
+    });
   } catch (error) {
     ErrorCounter.add(1, {
       type: "auth",
