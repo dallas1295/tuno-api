@@ -1,6 +1,6 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
-import { changeEmail } from "../src/controllers/changeEmail.ts";
+import { changePassword } from "../src/controllers/changePassword.ts";
 import { Response } from "../src/utils/response.ts";
 import { UserService } from "../src/services/user.ts";
 import { ChangeRateLimit } from "../src/utils/rateLimiter.ts";
@@ -28,7 +28,7 @@ const createMockContext = (
   }) as unknown as Context;
 
 Deno.test({
-  name: "Change Email Controller Tests",
+  name: "Change Password Controller Tests",
   sanitizeResources: false,
   sanitizeOps: false,
 
@@ -50,20 +50,23 @@ Deno.test({
     await t.step("setup: create test user", async () => {
       const createdUser = await userService.createUser(
         "testuser",
-        "old@example.com",
-        "Test123!@#$",
+        "test@example.com",
+        "OldPass123!@#",
       );
       assertExists(createdUser);
       testUser = createdUser;
     });
 
-    await t.step("should successfully change email", async () => {
+    await t.step("should successfully change password", async () => {
       const ctx = createMockContext(
-        { newEmail: "new@example.com" },
+        {
+          oldPassword: "OldPass123!@#",
+          newPassword: "NewPass123!@#",
+        },
         { user: { userId: testUser.userId } },
       );
 
-      await changeEmail(ctx);
+      await changePassword(ctx);
 
       assertEquals(ctx.response.status, 200);
     });
@@ -72,11 +75,14 @@ Deno.test({
       "should return unauthorized when no user ID in context",
       async () => {
         const ctx = createMockContext(
-          { newEmail: "new@example.com" },
+          {
+            oldPassword: "OldPass123!@#",
+            newPassword: "NewPass123!@#",
+          },
           {},
         );
 
-        await changeEmail(ctx);
+        await changePassword(ctx);
         const responseData = ctx.response.body as ResponseData;
 
         assertEquals(ctx.response.status, 401);
@@ -85,18 +91,21 @@ Deno.test({
     );
 
     await t.step(
-      "should return bad request when email is not provided",
+      "should return bad request when passwords are not provided",
       async () => {
         const ctx = createMockContext(
-          { newEmail: "" },
+          { oldPassword: "", newPassword: "" },
           { user: { userId: testUser.userId } },
         );
 
-        await changeEmail(ctx);
+        await changePassword(ctx);
         const responseData = ctx.response.body as ResponseData;
 
         assertEquals(ctx.response.status, 400);
-        assertEquals(responseData.error, "New email not provided");
+        assertEquals(
+          responseData.error,
+          "new or existing password not provided",
+        );
       },
     );
 
@@ -104,11 +113,14 @@ Deno.test({
       "should return unauthorized when user is not found",
       async () => {
         const ctx = createMockContext(
-          { newEmail: "new@example.com" },
+          {
+            oldPassword: "OldPass123!@#",
+            newPassword: "NewPass123!@#",
+          },
           { user: { userId: "nonexistent-id" } },
         );
 
-        await changeEmail(ctx);
+        await changePassword(ctx);
         const responseData = ctx.response.body as ResponseData;
 
         assertEquals(ctx.response.status, 401);
@@ -117,31 +129,34 @@ Deno.test({
     );
 
     await t.step("should handle rate limit errors", async () => {
-      const originalUpdateEmail = userService.updateEmail;
-      userService.updateEmail = () => {
+      const originalChangePassword = userService.changePassword;
+      userService.changePassword = () => {
         throw new ChangeRateLimit(14);
       };
 
       const ctx = createMockContext(
-        { newEmail: "new@example.com" },
+        {
+          oldPassword: "OldPass123!@#",
+          newPassword: "NewPass123!@#",
+        },
         { user: { userId: testUser.userId } },
       );
 
-      await changeEmail(ctx);
+      await changePassword(ctx);
       const responseData = ctx.response.body as ResponseData;
 
       assertEquals(ctx.response.status, 429);
       assertEquals(responseData.error, "Trying to update too frequently: 14");
 
-      userService.updateEmail = originalUpdateEmail;
+      userService.changePassword = originalChangePassword;
     });
 
     await t.step("cleanup: delete test user and close connection", async () => {
       if (testUser) {
         await userService.deleteUser(
           testUser.userId,
-          "Test123!@#$",
-          "Test123!@#$",
+          "NewPass123!@#",
+          "NewPass123!@#",
         );
         await closeDatabaseConnection();
       }
