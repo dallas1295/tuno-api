@@ -4,8 +4,7 @@
     "jsr:@denosaurs/plug@^1.0.6": "1.0.6",
     "jsr:@felix/argon2@*": "2.0.2",
     "jsr:@felix/argon2@^2.0.2": "2.0.2",
-    "jsr:@hectorm/otpauth@*": "9.3.6",
-    "jsr:@hectorm/otpauth@^9.3.6": "9.3.6",
+    "jsr:@hectorm/otpauth@^9.4.0": "9.4.0",
     "jsr:@iuioiua/redis@^1.1.1": "1.1.1",
     "jsr:@oak/commons@1": "1.0.0",
     "jsr:@oak/oak@^17.1.4": "17.1.4",
@@ -14,6 +13,7 @@
     "jsr:@std/assert@0.221": "0.221.0",
     "jsr:@std/assert@1": "1.0.11",
     "jsr:@std/assert@^1.0.11": "1.0.11",
+    "jsr:@std/assert@^1.0.12": "1.0.12",
     "jsr:@std/bytes@1": "1.0.5",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
     "jsr:@std/bytes@^1.0.5": "1.0.5",
@@ -29,6 +29,7 @@
     "jsr:@std/fs@0.221": "0.221.0",
     "jsr:@std/http@1": "1.0.13",
     "jsr:@std/internal@^1.0.5": "1.0.5",
+    "jsr:@std/internal@^1.0.6": "1.0.6",
     "jsr:@std/media-types@1": "1.1.0",
     "jsr:@std/path@0.221": "0.221.0",
     "jsr:@std/path@1": "1.0.8",
@@ -38,8 +39,8 @@
     "npm:@opentelemetry/sdk-metrics@2": "2.0.0_@opentelemetry+api@1.9.0",
     "npm:@types/node@*": "22.12.0",
     "npm:@types/node@^22.13.8": "22.13.8",
-    "npm:mongodb@*": "6.14.0",
-    "npm:mongodb@^6.14.0": "6.14.0",
+    "npm:mongodb@*": "6.15.0",
+    "npm:mongodb@^6.15.0": "6.15.0",
     "npm:path-to-regexp@^6.3.0": "6.3.0"
   },
   "jsr": {
@@ -58,8 +59,8 @@
         "jsr:@denosaurs/plug"
       ]
     },
-    "@hectorm/otpauth@9.3.6": {
-      "integrity": "a1b88bdee6a7b4e208954d58b8c69561711f2e43b2f7ff4e07202e4a4c06219c"
+    "@hectorm/otpauth@9.4.0": {
+      "integrity": "486cb01ee0334406199f46705179f46688473c9a1e0628ca4547e436ef46a6c5"
     },
     "@iuioiua/redis@1.1.1": {
       "integrity": "09b2490429e463af6202f8b86699e2e3d8ff02ca9a6bac41e220b6f790a63125",
@@ -103,7 +104,13 @@
     "@std/assert@1.0.11": {
       "integrity": "2461ef3c368fe88bc60e186e7744a93112f16fd110022e113a0849e94d1c83c1",
       "dependencies": [
-        "jsr:@std/internal"
+        "jsr:@std/internal@^1.0.5"
+      ]
+    },
+    "@std/assert@1.0.12": {
+      "integrity": "08009f0926dda9cbd8bef3a35d3b6a4b964b0ab5c3e140a4e0351fbf34af5b9a",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.6"
       ]
     },
     "@std/bytes@1.0.5": {
@@ -143,6 +150,9 @@
     "@std/internal@1.0.5": {
       "integrity": "54a546004f769c1ac9e025abd15a76b6671ddc9687e2313b67376125650dc7ba"
     },
+    "@std/internal@1.0.6": {
+      "integrity": "9533b128f230f73bd209408bb07a4b12f8d4255ab2a4d22a1fd6d87304aca9a4"
+    },
     "@std/media-types@1.1.0": {
       "integrity": "c9d093f0c05c3512932b330e3cc1fe1d627b301db33a4c2c2185c02471d6eaa4"
     },
@@ -157,8 +167,8 @@
     }
   },
   "npm": {
-    "@mongodb-js/saslprep@1.2.0": {
-      "integrity": "sha512-+ywrb0AqkfaYuhHs6LxKWgqbh3I72EpEgESCw37o+9qPx9WTCkgDm2B+eMrwehGtHBWHFU4GXvnSCNiFhhausg==",
+    "@mongodb-js/saslprep@1.2.2": {
+      "integrity": "sha512-EB0O3SCSNRUFk66iRCpI+cXzIjdswfCs7F6nOC3RAGJ7xr5YhaicvsRwJ9eyzYvYRlCSDUO/c7g4yNulxKC1WA==",
       "dependencies": [
         "sparse-bitfield"
       ]
@@ -235,8 +245,8 @@
         "whatwg-url"
       ]
     },
-    "mongodb@6.14.0": {
-      "integrity": "sha512-AlM6alTx98vcnk/jMMmoYuBrm4qpe1/VrbwvL2SXEHjdtJ1ZbVZmrpyjUx9mqS94e9HcemzpLn+CxzhmT7b0uw==",
+    "mongodb@6.15.0": {
+      "integrity": "sha512-ifBhQ0rRzHDzqp9jAQP6OwHSH7dbYIQjD3SbJs9YYk9AikKEettW/9s/tbSFDTpXcRbF+u1aLrhHxDFaYtZpFQ==",
       "dependencies": [
         "@mongodb-js/saslprep",
         "bson",
@@ -255,8 +265,8 @@
         "memory-pager"
       ]
     },
-    "tr46@5.0.0": {
-      "integrity": "sha512-tk2G5R2KRwBd+ZN0zaEXpmzdKyOYksXwywulIX95MBODjSzMIuQnQ3m8JxgbhnL1LeVo7lqQKsYa1O3Htl7K5g==",
+    "tr46@5.1.0": {
+      "integrity": "sha512-IUWnUK7ADYR5Sl1fZlO1INDUhVhatWl7BtJWsIhwJ0UAK7ilzzIa8uIqOO/aYVWHZPJkKbEL+362wrzoeRF7bw==",
       "dependencies": [
         "punycode"
       ]
@@ -267,8 +277,8 @@
     "webidl-conversions@7.0.0": {
       "integrity": "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g=="
     },
-    "whatwg-url@14.1.1": {
-      "integrity": "sha512-mDGf9diDad/giZ/Sm9Xi2YcyzaFpbdLpJPr+E9fSkyQ7KpQD4SdFcugkRQYzhmfI4KeV4Qpnn2sKPdo+kmsgRQ==",
+    "whatwg-url@14.2.0": {
+      "integrity": "sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==",
       "dependencies": [
         "tr46",
         "webidl-conversions"
@@ -278,17 +288,17 @@
   "workspace": {
     "dependencies": [
       "jsr:@felix/argon2@^2.0.2",
-      "jsr:@hectorm/otpauth@^9.3.6",
+      "jsr:@hectorm/otpauth@^9.4.0",
       "jsr:@iuioiua/redis@^1.1.1",
       "jsr:@oak/oak@^17.1.4",
       "jsr:@openjs/denoqr@1",
       "jsr:@panva/jose@^6.0.10",
-      "jsr:@std/assert@^1.0.11",
+      "jsr:@std/assert@^1.0.12",
       "jsr:@std/dotenv@~0.225.3",
       "npm:@opentelemetry/exporter-prometheus@0.200",
       "npm:@opentelemetry/sdk-metrics@2",
       "npm:@types/node@^22.13.8",
-      "npm:mongodb@^6.14.0"
+      "npm:mongodb@^6.15.0"
     ]
   }
 }
