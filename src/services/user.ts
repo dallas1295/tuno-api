@@ -37,6 +37,12 @@ export class UserService {
         "Password must have at least 2 special characters, 2 numbers, and be at least 8 characters long",
       );
     }
+
+    if (!validateEmail(email)) {
+      throw new Error(
+        "Must be a valid email",
+      );
+    }
     try {
       const userNameExists = await this.userRepo.findByUsername(username);
       if (userNameExists) {
