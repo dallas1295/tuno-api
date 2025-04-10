@@ -1,13 +1,13 @@
 import { Pattern, Priority } from "../models/todo.ts";
 
-export function validatePassword(password: string): Promise<boolean> {
+export function validatePassword(password: string): boolean {
   // Password must:
   // - Be at least 8 characters long
   // - Contain at least 2 numbers
   // - Contain at least 2 special character
 
   if (password.length < 8) {
-    return Promise.resolve(false);
+    return false;
   }
 
   const numberCount = (password.match(/\d/g) || []).length;
@@ -16,7 +16,7 @@ export function validatePassword(password: string): Promise<boolean> {
   const hasNumber = numberCount >= 2;
   const hasSpecial = specialCharCount >= 2;
 
-  return Promise.resolve(hasNumber && hasSpecial);
+  return hasNumber && hasSpecial;
 }
 
 export function validateEmail(email: string): boolean {
