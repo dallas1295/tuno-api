@@ -37,7 +37,6 @@ export class UserService {
         "Password must have at least 2 special characters, 2 numbers, and be at least 8 characters long",
       );
     }
-
     if (!validateEmail(email)) {
       throw new Error(
         "Must be a valid email",
@@ -47,6 +46,10 @@ export class UserService {
       const userNameExists = await this.userRepo.findByUsername(username);
       if (userNameExists) {
         throw new Error("Username already exists");
+      }
+      const emailExists = await this.userRepo.findByEmail(email);
+      if (emailExists) {
+        throw new Error("Email already in use");
       }
 
       const hashedPassword = await hashPassword(password);
@@ -158,6 +161,19 @@ export class UserService {
         operation: "find_by_id",
       });
       console.error("Error finding user by id");
+      throw error;
+    }
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    try {
+      return await this.userRepo.findById(email);
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "UserService",
+        operation: "find_by_email",
+      });
+      console.error("Error finding user by email");
       throw error;
     }
   }
