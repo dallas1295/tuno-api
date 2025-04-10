@@ -5,7 +5,7 @@ import { Context } from "@oak/oak";
 import { UserService } from "../services/user.ts";
 import { tokenService } from "../services/token.ts";
 
-export async function registration(ctx: Context) {
+export async function register(ctx: Context) {
   HTTPMetrics.track("POST", "/register");
 
   try {
@@ -19,31 +19,39 @@ export async function registration(ctx: Context) {
       return Response.badRequest(ctx, "Missing required fields");
     }
 
+    const userService = await UserService.initialize();
+    let user: User;
+
     try {
-      const userService = await UserService.initialize();
-      const user: User = await userService.createUser(
+      user = await userService.createUser(
         body.username,
         body.email,
         body.password,
       );
-
-      const tokens = await tokenService.generateTokenPair(user);
-
-      return Response.success(ctx, {
-        message: "User registered successfully",
-        user: { username: user.username, email: user.email },
-        ...tokens,
-      });
     } catch (error) {
       if (error instanceof Error) {
         return Response.badRequest(ctx, error.message);
       }
-      return Response.badRequest(ctx, "Invalid registration request");
+      throw error;
     }
+
+    const tokens = await tokenService.generateTokenPair(user);
+
+    return Response.created(ctx, {
+      message: "User registered successfully",
+      user: { username: user.username, email: user.email },
+      token: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+      links: {
+        self: { href: "/auth/login", method: "POST" },
+      },
+    });
   } catch (error) {
     ErrorCounter.add(1, {
       type: "internal",
-      operation: "register,",
+      operation: "register",
     });
     return Response.internalError(
       ctx,
