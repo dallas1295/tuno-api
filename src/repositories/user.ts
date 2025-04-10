@@ -57,6 +57,26 @@ export class UserRepo {
     }
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const timer = DatabaseMetrics.track("find", "users");
+    try {
+      const user = await this.collection.findOne({ email });
+      if (!user) {
+        return null;
+      }
+      return user;
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "database",
+        operation: "find_by_email_failed",
+      });
+      console.error("Failed to find user by email: ", error);
+      throw error;
+    } finally {
+      timer.end();
+    }
+  }
+
   async findById(userId: string): Promise<User | null> {
     const timer = DatabaseMetrics.track("find", "users");
     try {
