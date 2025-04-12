@@ -81,7 +81,7 @@ export async function login(ctx: Context) {
 }
 
 export async function verifyTwoFactorController(ctx: Context) {
-  HTTPMetrics.track("POST", "/verify-2fa");
+  HTTPMetrics.track("POST", "/login/verify");
 
   try {
     const body = await ctx.request.body.json();
