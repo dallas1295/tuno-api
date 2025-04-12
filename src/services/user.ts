@@ -287,7 +287,9 @@ export class UserService {
   }
   async enableTwoFactor(
     userId: string,
-  ): Promise<{ enabled: boolean; qrCode: string; uri: string }> {
+  ): Promise<
+    { qrCode: string; uri: string; secret: string }
+  > {
     try {
       const exists = await this.userRepo.findById(userId);
 
@@ -307,13 +309,21 @@ export class UserService {
         secret: secret.base32,
       });
 
-      const recovery = generateRecoveryCodes();
       const uri = OTPAuth.URI.stringify(totp);
       const qrSvg = denoqr.renderToSvg(denoqr.encodeText(uri));
 
-      await this.userRepo.enableTwoFactor(userId, secret.base32, recovery);
+      await this.userRepo.enableTwoFactor(
+        userId,
+        secret.base32,
+        [],
+        false,
+      );
 
-      return { enabled: true, qrCode: qrSvg, uri: uri };
+      return {
+        qrCode: qrSvg,
+        uri: uri,
+        secret: secret.base32,
+      };
     } catch (error) {
       ErrorCounter.add(1, {
         type: "UserService",
@@ -323,6 +333,56 @@ export class UserService {
       throw error;
     }
   }
+
+  async verifyTwoFactor(
+    userId: string,
+    token: string,
+    tempSecret: string,
+  ): Promise<{ verified: boolean; recoveryCodes: string[] }> {
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      if (!exists.twoFactorSecret) {
+        throw new Error("Two factor setup not started");
+      }
+
+      const totp = new OTPAuth.TOTP({
+        issuer: "toNotes",
+        label: "toNotesAuth",
+        algorithm: "SHA512",
+        digits: 6,
+        period: 30,
+        secret: tempSecret,
+      });
+
+      const validToken = totp.validate({ token });
+      if (!validToken) {
+        throw new Error("Invalid verification code");
+      }
+
+      const recoveryCodes = generateRecoveryCodes();
+
+      await this.userRepo.enableTwoFactor(
+        userId,
+        tempSecret,
+        recoveryCodes,
+        true,
+      );
+
+      return { verified: true, recoveryCodes };
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "UserService",
+        operation: "verify_two_factor",
+      });
+      console.error("Error verifying two factor setup");
+      throw error;
+    }
+  }
+
   async disableTwoFactor(
     userId: string,
     totp: string,
