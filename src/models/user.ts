@@ -32,6 +32,11 @@ export interface DeleteUserRequest {
   passwordTwo: string;
 }
 
+export interface DisableTwoFactorRequest {
+  password: string;
+  totp: string;
+}
+
 export interface UserProfile {
   username: string;
   email: string;
