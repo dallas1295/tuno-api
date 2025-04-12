@@ -46,13 +46,18 @@ export async function changePassword(ctx: Context) {
       return Response.badRequest(ctx, "failed to provide a new password");
     }
 
-    const update = await userService.changePassword(
-      user.userId,
-      req.newPassword,
-      req.oldPassword,
-    );
-    if (!update) {
-      return Response.internalError(ctx, "Failed to update password");
+    try {
+      await userService.changePassword(
+        user.userId,
+        req.newPassword,
+        req.oldPassword,
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        Response.badRequest(ctx, error.message);
+      }
+
+      throw error;
     }
 
     return Response.success(ctx, "Password successfully updated");

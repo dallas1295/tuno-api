@@ -26,17 +26,25 @@ export async function changeEmail(ctx: Context) {
     if (!req.newEmail) {
       return Response.badRequest(ctx, "New email not provided");
     }
-    const userService = await UserService.initialize();
 
-    const user = await userService.findById(userId);
+    try {
+      const userService = await UserService.initialize();
 
-    if (!user) {
-      return Response.unauthorized(ctx, "User not found");
-    }
+      const user = await userService.findById(userId);
 
-    const update = await userService.updateEmail(user.userId, req.newEmail);
-    if (!update) {
-      return Response.internalError(ctx, "Failed to update email");
+      if (!user) {
+        return Response.unauthorized(ctx, "User not found");
+      }
+
+      await userService.updateEmail(user.userId, req.newEmail);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error instanceof Error) {
+          Response.badRequest(ctx, error.message);
+        }
+
+        throw error;
+      }
     }
 
     return Response.success(ctx, "User email has been updated");
