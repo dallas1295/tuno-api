@@ -227,6 +227,7 @@ export class UserRepo {
     userId: string,
     secret: string,
     recoveryCodes: string[],
+    enabled: boolean = false,
   ): Promise<void> {
     const timer = DatabaseMetrics.track("update", "users");
     try {
