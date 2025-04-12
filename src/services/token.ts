@@ -88,7 +88,7 @@ export const tokenService = {
     }
   },
 
-  blacklistToken: async (
+  blacklistTokens: async (
     tokens: Array<{ token: string; type: "access" | "refresh" }>,
   ): Promise<void> => {
     try {
@@ -116,17 +116,6 @@ export const tokenService = {
     } catch (error) {
       console.error("Error checking blacklist:", error);
       throw new Error("Failed to check token blacklist");
-    }
-  },
-  // blacklisting for account deletion
-  blacklistUserTokens: async (userId: string): Promise<void> => {
-    try {
-      const pattern = `blacklist:*:${userId}:*`;
-      const keys = await RedisManager.keys(pattern);
-      await Promise.all(keys.map((key) => RedisManager.del(key)));
-    } catch (error) {
-      console.error("Error blacklisting user tokens:", error);
-      throw new Error("Failed to blacklist user tokens");
     }
   },
   generateTempToken: async (
