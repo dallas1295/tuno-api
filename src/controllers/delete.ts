@@ -7,7 +7,6 @@ import { tokenService } from "../services/token.ts";
 
 export async function deleteUser(ctx: Context) {
   HTTPMetrics.track("POST", "/delete");
-  // remember that deleteUser requires 2 password fields to verify.
   const userId = ctx.state.user?.userId;
   if (!userId) {
     ErrorCounter.add(1, {
@@ -37,16 +36,16 @@ export async function deleteUser(ctx: Context) {
         return Response.unauthorized(ctx, "User not found");
       }
 
-      await tokenService.blacklistTokens([
-        { token: ctx.state.accessToken, type: "access" },
-        { token: ctx.state.refreshToken, type: "refresh" },
-      ]);
-
       await userService.deleteUser(
         user.userId,
         req.passwordOne,
         req.passwordTwo,
       );
+
+      await tokenService.blacklistTokens([
+        { token: ctx.state.accessToken, type: "access" },
+        { token: ctx.state.refreshToken, type: "refresh" },
+      ]);
     } catch (error) {
       if (error instanceof Error) {
         Response.badRequest(ctx, error.message);
