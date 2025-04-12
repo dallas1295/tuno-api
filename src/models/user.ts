@@ -27,6 +27,11 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface DeleteUserRequest {
+  passwordOne: string;
+  passwordTwo: string;
+}
+
 export interface UserProfile {
   username: string;
   email: string;
