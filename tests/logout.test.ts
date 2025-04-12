@@ -130,10 +130,10 @@ Deno.test({
     );
 
     await t.step("should handle blacklist token service errors", async () => {
-      const originalBlacklistToken = tokenService.blacklistToken;
+      const originalBlacklistToken = tokenService.blacklistTokens;
 
       try {
-        tokenService.blacklistToken = () =>
+        tokenService.blacklistTokens = () =>
           Promise.reject(new Error("Database error"));
 
         const ctx = createMockContext(
@@ -150,7 +150,7 @@ Deno.test({
         assertEquals(ctx.response.status, 500);
         assertEquals(responseData.error, "Database error");
       } finally {
-        tokenService.blacklistToken = originalBlacklistToken;
+        tokenService.blacklistTokens = originalBlacklistToken;
       }
     });
 

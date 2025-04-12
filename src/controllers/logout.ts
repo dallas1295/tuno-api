@@ -25,7 +25,7 @@ export async function logout(ctx: Context) {
       return Response.badRequest(ctx, "Missing refresh token");
     }
 
-    await tokenService.blacklistToken([
+    await tokenService.blacklistTokens([
       { token: accessToken, type: "access" },
       { token: refreshToken, type: "refresh" },
     ]);
