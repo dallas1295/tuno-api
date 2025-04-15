@@ -205,7 +205,7 @@ Deno.test({
     }),
       await t.step("should return 400 for invalid input", async () => {
         const ctx = createMockContext({});
-        await verifyTwoFactorController(ctx);
+        await withTwoFactor(ctx);
         const responseData = ctx.response.body as ResponseData;
         assertEquals(ctx.response.status, 400);
         assertEquals(responseData.error, "Invalid input");
@@ -216,7 +216,7 @@ Deno.test({
         tempToken: "valid-token",
         totpCode: "12345", // Invalid length
       });
-      await verifyTwoFactorController(ctx);
+      await withTwoFactor(ctx);
       const responseData = ctx.response.body as ResponseData;
       assertEquals(ctx.response.status, 400);
       assertEquals(responseData.error, "Invalid TOTP code format");
@@ -249,7 +249,7 @@ Deno.test({
         totpCode: totpCode,
       });
 
-      await verifyTwoFactorController(verifyCtx);
+      await withTwoFactor(verifyCtx);
       const responseData = verifyCtx.response.body as ResponseData;
 
       // Debug: Check verification response
