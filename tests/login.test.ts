@@ -1,7 +1,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
 import { User } from "../src/models/user.ts";
-import { login, verifyTwoFactorController } from "../src/controllers/login.ts";
+import { login, withTwoFactor } from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
 import { UserService } from "../src/services/user.ts";
 import * as OTPAuth from "@hectorm/otpauth";
@@ -174,9 +174,9 @@ Deno.test({
     let userService: UserService;
     let testUser: User;
     let twoFactorSetup: {
-      enabled: boolean;
       qrCode: string;
       uri: string;
+      secret: string;
     };
     let totp: OTPAuth.TOTP;
 
