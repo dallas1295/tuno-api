@@ -80,8 +80,8 @@ export async function login(ctx: Context) {
   }
 }
 
-export async function verifyTwoFactorController(ctx: Context) {
-  HTTPMetrics.track("POST", "/login/verify");
+export async function withTwoFactor(ctx: Context) {
+  HTTPMetrics.track("POST", "/login/2fa");
 
   try {
     const body = await ctx.request.body.json();
@@ -152,4 +152,8 @@ export async function verifyTwoFactorController(ctx: Context) {
       error instanceof Error ? error.message : "Error verifying totp",
     );
   }
+}
+
+export async function withRecovery(ctx: Context) {
+  HTTPMetrics.track("POST", "/login/recovery");
 }
