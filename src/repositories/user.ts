@@ -293,4 +293,31 @@ export class UserRepo {
       timer.end();
     }
   }
+    async updateUserRecoveryCodes(userId: string, recoveryCodes: string[]): Promise<void> {
+    const timer = DatabaseMetrics.track("update", "users");
+    try {
+      const result = await this.collection.updateOne(
+        { userId },
+        { $set: { recoveryCodes } }
+      );
+      if (result.matchedCount === 0) {
+        ErrorCounter.add(1, {
+          type: "database",
+          operation: "recovery_codes_update_failed",
+        });
+        throw new Error("User not found for recovery code update");
+      }
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "database",
+        operation: "recovery_codes_update_failed",
+      });
+      console.error("Failed to update recovery codes: ", error);
+      throw error;
+    } finally {
+      timer.end();
+    }
+  }
+}
+
 }

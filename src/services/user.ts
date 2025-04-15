@@ -479,4 +479,41 @@ export class UserService {
       throw error;
     }
   }
+  async useRecoveryCode(
+    userId: string,
+    recoveryCode: string,
+  ): Promise<boolean> {
+    try {
+      const exists = await this.userRepo.findById(userId);
+      if (!exists) {
+        throw new Error("User not found");
+      }
+
+      if (!recoveryCode) {
+        throw new Error("No code provided");
+      }
+
+      const used = recoveryCode.trim();
+
+      if (exists.recoveryCodes?.includes(used)) {
+        const updatedCodes = exists.recoveryCodes.filter((remaining) =>
+          remaining !== used
+        );
+        await this.userRepo.updateUserRecoveryCodes(
+          exists.userId,
+          updatedCodes,
+        );
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "UserService",
+        operation: "user_recovery",
+      });
+      console.error("Error using recovery code");
+      throw error;
+    }
+  }
 }
