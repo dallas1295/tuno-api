@@ -13,8 +13,8 @@ import * as OTPAuth from "@hectorm/otpauth";
 export async function login(ctx: Context) {
   HTTPMetrics.track("POST", "/login");
 
-  const loginReq = await ctx.request.body.json() as LoginRequest;
   try {
+    const loginReq = await ctx.request.body.json() as LoginRequest;
     if (!loginReq || !loginReq.username || !loginReq.password) {
       return Response.badRequest(ctx, "Invalid Input");
     }
@@ -27,47 +27,60 @@ export async function login(ctx: Context) {
     }
 
     const userService = await UserService.initialize();
-
     const user = await userService.findByUsername(loginReq.username);
     if (!user) {
       await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
       return Response.unauthorized(ctx, "User doesn't exist");
     }
 
-    const checkPassword = await verifyPassword(
-      user.passwordHash,
-      loginReq.password,
-    );
-    if (!checkPassword) {
-      await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
-      return Response.unauthorized(ctx, "Invalid password");
-    }
-
-    await RateLimiter.resetAttempts(ctx.request.ip, loginReq.username);
-
-    if (user.twoFactorEnabled) {
-      const temp = await tokenService.generateTempToken(
-        user.userId,
-        "5m",
+    try {
+      const checkPassword = await verifyPassword(
+        user.passwordHash,
+        loginReq.password,
       );
+      if (!checkPassword) {
+        await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
+        return Response.unauthorized(ctx, "Invalid password");
+      }
+
+      await RateLimiter.resetAttempts(ctx.request.ip, loginReq.username);
+
+      if (user.twoFactorEnabled) {
+        const recoveryAvailable = user.recoveryCodes &&
+          user.recoveryCodes.length > 0;
+
+        const temp = await tokenService.generateTempToken(
+          user.userId,
+          "5m",
+          recoveryAvailable!,
+        );
+
+        return Response.success(ctx, {
+          requireTwoFactor: true,
+          tempToken: temp,
+          user: user.username,
+          recoveryAvailable,
+        });
+      }
+
+      const token = await tokenService.generateTokenPair(user);
+      const links = {
+        self: { href: `/users/${user.userId}`, method: "GET" },
+        logout: { href: "/auth/logout", method: "POST" },
+      };
+      const userResponse = toUserResponse(user, links);
+
       return Response.success(ctx, {
-        requireTwoFactor: true,
-        tempToken: temp,
-        user: user.username,
+        token,
+        user: userResponse,
       });
+    } catch (error) {
+      if (error instanceof Error) {
+        Response.badRequest(ctx, error.message);
+      }
+
+      throw error;
     }
-
-    const token = await tokenService.generateTokenPair(user);
-    const links = {
-      self: { href: `/users/${user.userId}`, method: "GET" },
-      logout: { href: "/auth/logout", method: "POST" },
-    };
-    const userResponse = toUserResponse(user, links);
-
-    return Response.success(ctx, {
-      token,
-      user: userResponse,
-    });
   } catch (error) {
     ErrorCounter.add(1, {
       type: "internal",
@@ -81,7 +94,7 @@ export async function login(ctx: Context) {
 }
 
 export async function withTwoFactor(ctx: Context) {
-  HTTPMetrics.track("POST", "/login/2fa");
+  HTTPMetrics.track("POST", "/login/2fa/verify");
 
   try {
     const body = await ctx.request.body.json();
@@ -122,31 +135,43 @@ export async function withTwoFactor(ctx: Context) {
       return Response.unauthorized(ctx, "User not found");
     }
 
-    const isValidTotp = verifyTOTP(
-      OTPAuth.Secret.fromBase32(user.twoFactorSecret!),
-      totpCode,
-    );
-    if (!isValidTotp) {
-      await RateLimiter.trackAttempt(ctx.request.ip);
-      return Response.unauthorized(ctx, "Invalid 2FA code");
+    try {
+      const isValidTotp = verifyTOTP(
+        OTPAuth.Secret.fromBase32(user.twoFactorSecret!),
+        totpCode,
+      );
+      if (!isValidTotp) {
+        await RateLimiter.trackAttempt(ctx.request.ip);
+        return Response.unauthorized(ctx, "Invalid 2FA code");
+      }
+
+      // Reset rate limiting on successful 2FA
+      await RateLimiter.resetAttempts(ctx.request.ip);
+
+      const token = await tokenService.generateTokenPair(user);
+      const links = {
+        self: { href: `/users/${user.userId}`, method: "GET" },
+        logout: { href: "/auth/logout", method: "POST" },
+      };
+
+      const userResponse = toUserResponse(user, links);
+
+      return Response.success(ctx, {
+        token,
+        user: userResponse,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+
+      throw error;
     }
-
-    // Reset rate limiting on successful 2FA
-    await RateLimiter.resetAttempts(ctx.request.ip);
-
-    const token = await tokenService.generateTokenPair(user);
-    const links = {
-      self: { href: `/users/${user.userId}`, method: "GET" },
-      logout: { href: "/auth/logout", method: "POST" },
-    };
-
-    const userResponse = toUserResponse(user, links);
-
-    return Response.success(ctx, {
-      token,
-      user: userResponse,
-    });
   } catch (error) {
+    ErrorCounter.add(1, {
+      type: "login",
+      operation: "with_recovery_code",
+    });
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error verifying totp",
@@ -155,8 +180,89 @@ export async function withTwoFactor(ctx: Context) {
 }
 
 export async function withRecovery(ctx: Context) {
-  HTTPMetrics.track("POST", "/login/recovery");
+  HTTPMetrics.track("POST", "/login/2fa/recovery");
   try {
-    
+    const body = await ctx.request.body.json();
+    if (!body) {
+      return Response.badRequest(ctx, "Invlaid input");
+    }
+
+    if (
+      typeof body.tempToken !== "string" ||
+      typeof body.recoveryCode !== "string"
+    ) {
+      return Response.badRequest(ctx, "Invalid input");
+    }
+
+    const { tempToken, recoveryCode } = body;
+
+    if (await RateLimiter.isRateLimited(ctx.request.ip)) {
+      return Response.tooManyRequests(
+        ctx,
+        "Too many recovery attempts. Please try again later",
+      );
+    }
+
+    const payload = await tokenService.verifyTempToken(tempToken);
+    if (!payload || payload.type !== "temp" || !payload.userId) {
+      await RateLimiter.trackAttempt(ctx.request.ip);
+      return Response.unauthorized(ctx, "Invalid or expired session");
+    }
+
+    if (!payload.recoveryAvailable) {
+      await RateLimiter.trackAttempt(ctx.request.ip);
+      return Response.unauthorized(
+        ctx,
+        "Recovery authentication not available",
+      );
+    }
+
+    try {
+      const userService = await UserService.initialize();
+      const user = await userService.findById(payload.userId);
+      if (!user) {
+        await RateLimiter.trackAttempt(ctx.request.ip);
+        return Response.unauthorized(ctx, "User not found");
+      }
+
+      const isValidRecovery = await userService.useRecoveryCode(
+        user.userId,
+        recoveryCode,
+      );
+      if (!isValidRecovery) {
+        await RateLimiter.trackAttempt(ctx.request.ip);
+        return Response.unauthorized(ctx, "Invalid recovery code");
+      }
+
+      await RateLimiter.resetAttempts(ctx.request.ip);
+
+      const token = await tokenService.generateTokenPair(user);
+      const links = {
+        self: { href: `users/${user.userId}`, method: "GET" },
+        logout: { href: "/auth/logout", method: "POST" },
+      };
+
+      const userResponse = toUserResponse(user, links);
+
+      return Response.success(ctx, {
+        token,
+        user: userResponse,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+
+      throw error;
+    }
+  } catch (error) {
+    ErrorCounter.add(1, {
+      type: "login",
+      operation: "with_recovery_code",
+    });
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Error verifying recovery code",
+    );
   }
 }
