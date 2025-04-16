@@ -293,12 +293,15 @@ export class UserRepo {
       timer.end();
     }
   }
-    async updateUserRecoveryCodes(userId: string, recoveryCodes: string[]): Promise<void> {
+  async updateUserRecoveryCodes(
+    userId: string,
+    recoveryCodes: string[],
+  ): Promise<void> {
     const timer = DatabaseMetrics.track("update", "users");
     try {
       const result = await this.collection.updateOne(
         { userId },
-        { $set: { recoveryCodes } }
+        { $set: { recoveryCodes } },
       );
       if (result.matchedCount === 0) {
         ErrorCounter.add(1, {
@@ -318,6 +321,4 @@ export class UserRepo {
       timer.end();
     }
   }
-}
-
 }
