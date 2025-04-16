@@ -1,7 +1,11 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
 import { User } from "../src/models/user.ts";
-import { login, withTwoFactor } from "../src/controllers/login.ts";
+import {
+  login,
+  withRecovery,
+  withTwoFactor,
+} from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
 import { UserService } from "../src/services/user.ts";
 import * as OTPAuth from "@hectorm/otpauth";
@@ -13,6 +17,7 @@ interface ResponseData {
     user?: { username: string };
     requireTwoFactor?: boolean;
     tempToken?: string;
+    recoveryAvailable: boolean;
   };
   error?: string;
 }
@@ -127,6 +132,24 @@ Deno.test({
         secret: OTPAuth.URI.parse(twoFactorSetup.uri).secret,
       });
 
+      // Complete 2FA setup by verifying the first TOTP code
+      const setupResult = await userService.verifyTwoFactor(
+        testUser.userId,
+        totp.generate(),
+        twoFactorSetup.secret,
+      );
+      assertExists(setupResult.recoveryCodes, "Should get recovery codes");
+      const updatedUser = await userService.findById(testUser.userId);
+      assertExists(updatedUser, "User should exist after 2FA setup");
+      testUser = updatedUser;
+
+      console.log("Updated User:", {
+        twoFactorEnabled: testUser.twoFactorEnabled,
+        hasRecoveryCodes: !!testUser.recoveryCodes,
+        recoveryCodesLength: testUser.recoveryCodes?.length,
+      });
+
+      // Now test the login flow with 2FA
       const ctx = createMockContext({
         username: "testuser",
         password: "Test123!@#$",
@@ -137,6 +160,111 @@ Deno.test({
       assertEquals(ctx.response.status, 200);
       assertEquals(responseData.data?.requireTwoFactor, true);
       assertExists(responseData.data?.tempToken);
+      assertEquals(responseData.data?.recoveryAvailable, true);
+    });
+
+    await t.step("should verify valid 2FA code", async () => {
+      // Use existing TOTP instance from previous test
+      assertExists(totp, "TOTP should be initialized");
+
+      const loginCtx = createMockContext({
+        username: "testuser",
+        password: "Test123!@#$",
+      });
+
+      await login(loginCtx);
+      const loginResponse = loginCtx.response.body as ResponseData;
+      assertExists(loginResponse.data?.tempToken, "Should have temp token");
+
+      const totpCode = totp.generate();
+      const verifyCtx = createMockContext({
+        tempToken: loginResponse.data?.tempToken,
+        totpCode: totpCode,
+      });
+
+      await withTwoFactor(verifyCtx);
+      const verifyResponse = verifyCtx.response.body as ResponseData;
+
+      assertEquals(verifyCtx.response.status, 200);
+      assertExists(verifyResponse.data?.token);
+      assertExists(verifyResponse.data?.user);
+      assertEquals(verifyResponse.data?.user?.username, "testuser");
+    });
+
+    await t.step("should reject invalid 2FA code", async () => {
+      const loginCtx = createMockContext({
+        username: "testuser",
+        password: "Test123!@#$",
+      });
+
+      await login(loginCtx);
+      const loginResponse = loginCtx.response.body as ResponseData;
+      assertExists(loginResponse.data?.tempToken);
+
+      const verifyCtx = createMockContext({
+        tempToken: loginResponse.data?.tempToken,
+        totpCode: "000000", // Invalid code
+      });
+
+      await withTwoFactor(verifyCtx);
+      assertEquals(verifyCtx.response.status, 401);
+      assertEquals(
+        (verifyCtx.response.body as ResponseData).error,
+        "Invalid 2FA code",
+      );
+    });
+
+    await t.step("should authenticate with valid recovery code", async () => {
+      // First get temp token from login
+      const loginCtx = createMockContext({
+        username: "testuser",
+        password: "Test123!@#$",
+      });
+
+      await login(loginCtx);
+      const loginResponse = loginCtx.response.body as ResponseData;
+      assertExists(loginResponse.data?.tempToken, "Should have temp token");
+      assertEquals(loginResponse.data?.recoveryAvailable, true);
+
+      const user = await userService.findByUsername("testuser");
+      assertExists(user!.recoveryCodes);
+      const recoveryCode = user!.recoveryCodes[0];
+
+      const verifyCtx = createMockContext({
+        tempToken: loginResponse.data?.tempToken,
+        recoveryCode: recoveryCode,
+      });
+
+      await withRecovery(verifyCtx);
+      const verifyResponse = verifyCtx.response.body as ResponseData;
+
+      assertEquals(verifyCtx.response.status, 200);
+      assertExists(verifyResponse.data?.token);
+      assertExists(verifyResponse.data?.user);
+      assertEquals(verifyResponse.data?.user?.username, "testuser");
+    });
+
+    await t.step("should reject invalid recovery code", async () => {
+      const loginCtx = createMockContext({
+        username: "testuser",
+        password: "Test123!@#$",
+      });
+
+      await login(loginCtx);
+      const loginResponse = loginCtx.response.body as ResponseData;
+      assertExists(loginResponse.data?.tempToken);
+
+      const verifyCtx = createMockContext({
+        tempToken: loginResponse.data?.tempToken,
+        recoveryCode: "invalid-code",
+      });
+
+      await withRecovery(verifyCtx);
+      assertEquals(verifyCtx.response.status, 401);
+      assertEquals(
+        (verifyCtx.response.body as ResponseData).error,
+        "Invalid recovery code",
+      );
     });
 
     // Cleanup
