@@ -8,6 +8,7 @@ interface UserPayload extends JWTPayload {
   userId: string;
   username: string;
   type?: string;
+  recoveryAvailable?: boolean;
 }
 
 export const tokenService = {
@@ -121,11 +122,13 @@ export const tokenService = {
   generateTempToken: async (
     userId: string,
     expiry: string,
+    recoveryAvailable: boolean,
   ): Promise<string> => {
     try {
       const tempToken = await new SignJWT({
         userId,
         type: "temp",
+        recoveryAvailable,
       })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
