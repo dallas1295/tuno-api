@@ -124,13 +124,16 @@ Deno.test({
       assertExists(twoFactorSetup);
 
       totp = new OTPAuth.TOTP({
-        issuer: "toNotes_test",
-        label: "toNotesAuth_test",
+        issuer: "toNotes",
+        label: "toNotesAuth",
         algorithm: "SHA512",
         digits: 6,
         period: 30,
-        secret: OTPAuth.URI.parse(twoFactorSetup.uri).secret,
+        secret: twoFactorSetup.secret,
       });
+      const generatedCode = totp.generate();
+      console.log("TEST DEBUG - TOTP Secret:", twoFactorSetup.secret);
+      console.log("TEST DEBUG - Generatd TOTP Token:", generatedCode);
 
       // Complete 2FA setup by verifying the first TOTP code
       const setupResult = await userService.verifyTwoFactor(
@@ -226,9 +229,12 @@ Deno.test({
       assertExists(loginResponse.data?.tempToken, "Should have temp token");
       assertEquals(loginResponse.data?.recoveryAvailable, true);
 
-      const user = await userService.findByUsername("testuser");
-      assertExists(user!.recoveryCodes);
-      const recoveryCode = user!.recoveryCodes[0];
+      const updatedUser = await userService.findByUsername("testuser");
+      assertExists(
+        updatedUser?.recoveryCodes,
+        "User should have recovery codes.",
+      );
+      const recoveryCode = updatedUser!.recoveryCodes[0];
 
       const verifyCtx = createMockContext({
         tempToken: loginResponse.data?.tempToken,
