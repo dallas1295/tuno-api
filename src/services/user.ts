@@ -167,7 +167,7 @@ export class UserService {
 
   async findByEmail(email: string): Promise<User | null> {
     try {
-      return await this.userRepo.findById(email);
+      return await this.userRepo.findByEmail(email);
     } catch (error) {
       ErrorCounter.add(1, {
         type: "UserService",
@@ -358,8 +358,8 @@ export class UserService {
         secret: tempSecret,
       });
 
-      const validToken = totp.validate({ token });
-      if (!validToken) {
+      const validToken = totp.validate({ token }); //NOTE: could add window: 1 to make looser if necessary
+      if (validToken === null) {
         throw new Error("Invalid verification code");
       }
 
@@ -487,6 +487,10 @@ export class UserService {
       const exists = await this.userRepo.findById(userId);
       if (!exists) {
         throw new Error("User not found");
+      }
+
+      if (!exists.recoveryCodes || exists.recoveryCodes.length === 0) {
+        throw new Error("Recovery authentication not available");
       }
 
       if (!recoveryCode) {
