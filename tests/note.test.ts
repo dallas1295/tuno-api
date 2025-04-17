@@ -1,7 +1,11 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { searchNotes } from "../src/controllers/note.ts";
 import { NoteService } from "../src/services/note.ts";
-import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
+import {
+  closeDatabaseConnection,
+  connectToDb,
+  ensureIndexes,
+} from "../src/config/db.ts";
 import { Note } from "../src/models/note.ts";
 import { Context } from "@oak/oak";
 import { UserService } from "../src/services/user.ts";
@@ -54,6 +58,7 @@ Deno.test({
         const client = await connectToDb();
         await client.db().collection("users").deleteMany({});
         await client.db().collection("notes").deleteMany({});
+        await ensureIndexes();
         userService = await UserService.initialize();
         noteService = await NoteService.initialize();
       } catch (error) {
@@ -108,7 +113,13 @@ Deno.test({
       "cleanup: delete test note and user, close connection",
       async () => {
         if (testNote) {
-          await noteService.deleteNote(testNote.noteId, testUser.userId);
+          try {
+            await noteService.deleteNote(testNote.noteId, testUser.userId);
+          } catch (error) {
+            if (
+              !(error instanceof Error) || error.message !== "Note not found"
+            ) throw error;
+          }
         }
         if (testUser) {
           await userService.deleteUser(
