@@ -98,6 +98,14 @@ async function testConnection() {
   }
 }
 
+export async function ensureIndexes() {
+  const client = await connectToDb();
+  await client.db().collection("notes").createIndex({
+    noteName: "text",
+    content: "text",
+  });
+}
+
 if (import.meta.main) {
   await testConnection();
 }
