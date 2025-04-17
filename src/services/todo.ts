@@ -6,8 +6,7 @@ import {
   validateTags,
 } from "../utils/validators.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
-import { MongoClient } from "mongodb";
-import "@std/dotenv/load";
+import { connectToDb } from "../config/db.ts";
 
 export interface TodoStats {
   total: number;
@@ -22,14 +21,21 @@ export interface TodoStats {
 }
 
 export class TodoService {
-  private todoRepo: TodoRepo;
+  private todoRepo!: TodoRepo;
 
-  constructor() {
-    const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
-    this.todoRepo = new TodoRepo(dbClient);
+  private constructor() {}
+
+  static async initialize(): Promise<TodoService> {
+    const service = new TodoService();
+    try {
+      const dbClient = await connectToDb();
+      service.todoRepo = new TodoRepo(dbClient);
+      return service;
+    } catch (error) {
+      console.error("Failed to initialize NoteService: ", error);
+      throw error;
+    }
   }
-
-  // helpers
 
   isTodoValid(todo: Todo): boolean {
     if (!todo.userId) return false;

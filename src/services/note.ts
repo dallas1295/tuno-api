@@ -24,7 +24,6 @@ export class NoteService {
     this.noteRepo = new NoteRepo(dbClient);
   }
 
-  //helper
   isNoteValid(note: Note): boolean {
     const noteName = note.noteName?.trim() ?? "";
     if (!noteName) false;
