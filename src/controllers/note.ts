@@ -1,10 +1,5 @@
 import { NoteService } from "../services/note.ts";
-import {
-  newNotesPageResponse,
-  NoteLink,
-  NotePageResponse,
-  NoteResponse,
-} from "../dto/note.ts";
+import { newNotesPageResponse, NoteLink } from "../dto/note.ts";
 import { Context } from "@oak/oak";
 import { Response } from "../utils/response.ts";
 import { Note } from "../models/note.ts";
