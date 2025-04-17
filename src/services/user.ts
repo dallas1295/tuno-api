@@ -16,6 +16,8 @@ export class UserService {
 
   private constructor() {}
 
+  private static instance?: UserService;
+
   static async initialize(): Promise<UserService> {
     const service = new UserService();
     try {

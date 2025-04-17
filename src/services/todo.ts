@@ -25,7 +25,11 @@ export class TodoService {
 
   private constructor() {}
 
+  private static instance?: TodoService;
   static async initialize(): Promise<TodoService> {
+    if (TodoService.instance) {
+      return TodoService.instance;
+    }
     const service = new TodoService();
     try {
       const dbClient = await connectToDb();

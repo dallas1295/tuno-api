@@ -1,8 +1,9 @@
 import { Note } from "../models/note.ts";
 import { NoteRepo } from "../repositories/note.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
-import { MongoClient, UpdateFilter } from "mongodb";
+import { UpdateFilter } from "mongodb";
 import "@std/dotenv/load";
+import { connectToDb } from "../config/db.ts";
 
 interface NoteSearchOptions {
   userId?: string;
@@ -17,11 +18,25 @@ interface NoteSearchOptions {
 }
 
 export class NoteService {
-  private noteRepo: NoteRepo;
+  private noteRepo!: NoteRepo;
 
-  constructor() {
-    const dbClient = new MongoClient(Deno.env.get("MONGO_URI") as string);
-    this.noteRepo = new NoteRepo(dbClient);
+  private constructor() {}
+
+  private static instance?: NoteService;
+
+  static async initialize(): Promise<NoteService> {
+    if (NoteService.instance) {
+      return NoteService.instance;
+    }
+    const service = new NoteService();
+    try {
+      const dbClient = await connectToDb();
+      service.noteRepo = new NoteRepo(dbClient);
+      return service;
+    } catch (error) {
+      console.error("Failed to initialize NoteService: ", error);
+      throw error;
+    }
   }
 
   isNoteValid(note: Note): boolean {
