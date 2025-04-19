@@ -140,7 +140,7 @@ export class NoteRepo {
     try {
       const filter = {
         userId: userId,
-        todoId: noteId,
+        noteId: noteId,
       };
 
       const update = {
