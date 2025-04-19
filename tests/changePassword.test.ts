@@ -2,7 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
 import { changePassword } from "../src/controllers/changePassword.ts";
 import { Response } from "../src/utils/response.ts";
-import { UserService } from "../src/services/user.ts";
+import { initializeServices, userService } from "../src/config/serviceSetup.ts";
 import { ChangeRateLimit } from "../src/utils/rateLimiter.ts";
 import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
 import { User } from "../src/models/user.ts";
@@ -33,14 +33,13 @@ Deno.test({
   sanitizeOps: false,
 
   async fn(t) {
-    let userService: UserService;
+    await initializeServices();
     let testUser: User;
 
     await t.step("setup: initialize mongodb", async () => {
       try {
         const client = await connectToDb();
         await client.db().collection("users").deleteMany({});
-        userService = await UserService.initialize();
       } catch (error) {
         console.error("Connection failed aborting test");
         throw error;

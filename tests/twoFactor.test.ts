@@ -1,229 +1,154 @@
-import { assertSpyCall, spy, stub } from "@std/testing/mock";
-import {
-  disableTwoFactor,
-  enableTwoFactor,
-  verifyTwoFactor,
-} from "../src/controllers/twoFactor.ts";
-import { UserService } from "../src/services/user.ts";
+import { DisableTwoFactorRequest } from "../src/models/user.ts";
+import { ErrorCounter, HTTPMetrics } from "../src/utils/metrics.ts";
 import { Response } from "../src/utils/response.ts";
-import type { Context } from "@oak/oak";
-import type { User } from "../src/models/user.ts";
+import { Context } from "@oak/oak";
+import { userService } from "../src/config/serviceSetup.ts";
 
-// Helper: minimal valid User object
-const baseUser: User = {
-  userId: "user123",
-  username: "testuser",
-  passwordHash: "hash",
-  createdAt: new Date(),
-  email: "test@example.com",
-  twoFactorEnabled: false,
-};
+export async function enableTwoFactor(ctx: Context) {
+  HTTPMetrics.track("POST", "/2fa/setup");
 
-function createMockCtx(
-  body: unknown = {},
-  overrides: Partial<Context> = {},
-): Context {
-  return {
-    request: {
-      body: {
-        value: body,
-        json: () => Promise.resolve(body),
-      },
-      ...(overrides.request ?? {}),
-    },
-    state: {
-      user: { userId: "user123" },
-      session: {
-        set: spy(async () => {}),
-        get: spy(async () => "secret"),
-        delete: spy(async () => {}),
-      },
-      ...(overrides.state ?? {}),
-    },
-    response: {
-      status: 0,
-      body: undefined,
-      headers: new Headers(),
-    },
-    ...overrides,
-  } as unknown as Context;
-}
+  try {
+    const userId = ctx.state.user?.userId;
+    if (!userId) {
+      ErrorCounter.add(1, {
+        type: "auth",
+        operation: "change_email_unauthorized",
+      });
 
-// Helper to create a full UserService stub with only the needed methods overridden
-function makeUserServiceStub(methods: Partial<UserService>): UserService {
-  const base: Record<string, unknown> = {};
-  for (const key of Object.getOwnPropertyNames(UserService.prototype)) {
-    if (key !== "constructor") {
-      base[key] = async () => undefined;
+      return Response.unauthorized(ctx, "Missing or invalid Token");
     }
+
+    try {
+      const user = await userService.findById(userId);
+      if (!user) {
+        return Response.unauthorized(ctx, "User not found");
+      }
+
+      if (user.twoFactorEnabled) {
+        return Response.badRequest(ctx, "2FA already enabled");
+      }
+
+      const { qrCode, uri, secret } = await userService
+        .enableTwoFactor(
+          user.userId,
+        );
+
+      ctx.state.session.set("temp2faSecret", secret);
+      return Response.success(ctx, { qrCode, uri });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error instanceof Error) {
+          Response.badRequest(ctx, error.message);
+        }
+      }
+      throw error;
+    }
+  } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "setup_two_factor",
+    });
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Error setting up 2FA",
+    );
   }
-  return { ...base, ...methods } as UserService;
 }
 
-Deno.test("enableTwoFactor: returns unauthorized if no user", async () => {
-  const ctx = createMockCtx({}, {
-    state: {
-      user: null,
-      session: {
-        set: spy(async () => {}),
-        get: spy(async () => "secret"),
-        delete: spy(async () => {}),
-      },
-    },
-  });
-  const unauthorized = spy(Response, "unauthorized");
-  try {
-    await enableTwoFactor(ctx);
-    assertSpyCall(unauthorized, 0);
-  } finally {
-    unauthorized.restore();
-  }
-});
+export async function verifyTwoFactor(ctx: Context) {
+  HTTPMetrics.track("POST", "/2fa/verify");
 
-Deno.test("enableTwoFactor: returns badRequest if 2FA already enabled", async () => {
-  const ctx = createMockCtx();
-  const stubInit = stub(
-    UserService,
-    "initialize",
-    async () =>
-      makeUserServiceStub({
-        findById: async (_userId: string) => ({
-          ...baseUser,
-          twoFactorEnabled: true,
-        }),
-      }),
-  );
-  const badRequest = spy(Response, "badRequest");
   try {
-    await enableTwoFactor(ctx);
-    assertSpyCall(badRequest, 0);
-  } finally {
-    stubInit.restore();
-    badRequest.restore();
-  }
-});
+    const userId = ctx.state.user?.userId;
+    if (!userId) {
+      ErrorCounter.add(1, {
+        type: "auth",
+        operation: "verify_2fa_unauthorized",
+      });
 
-Deno.test("enableTwoFactor: returns success with qrCode and uri", async () => {
-  const ctx = createMockCtx();
-  const stubInit = stub(
-    UserService,
-    "initialize",
-    async () =>
-      makeUserServiceStub({
-        findById: async (_userId: string) => ({
-          ...baseUser,
-          twoFactorEnabled: false,
-        }),
-        enableTwoFactor: async () => ({
-          qrCode: "qr",
-          uri: "uri",
-          secret: "secret",
-        }),
-      }),
-  );
-  const success = spy(Response, "success");
-  try {
-    await enableTwoFactor(ctx);
-    assertSpyCall(success, 0);
-  } finally {
-    stubInit.restore();
-    success.restore();
-  }
-});
+      return Response.unauthorized(ctx, "Missing or invalid Token");
+    }
 
-Deno.test("verifyTwoFactor: returns unauthorized if no user", async () => {
-  const ctx = createMockCtx({}, {
-    state: {
-      user: null,
-      session: {
-        set: spy(async () => {}),
-        get: spy(async () => "secret"),
-        delete: spy(async () => {}),
-      },
-    },
-  });
-  const unauthorized = spy(Response, "unauthorized");
-  try {
-    await verifyTwoFactor(ctx);
-    assertSpyCall(unauthorized, 0);
-  } finally {
-    unauthorized.restore();
-  }
-});
+    const { token } = await ctx.request.body.json();
+    const temp2faSecret = await ctx.state.session.get("temp2faSecret");
 
-Deno.test("verifyTwoFactor: returns badRequest if no temp2faSecret", async () => {
-  const ctx = createMockCtx();
-  ctx.state.session.get = spy(async () => null);
-  const badRequest = spy(Response, "badRequest");
-  try {
-    await verifyTwoFactor(ctx);
-    assertSpyCall(badRequest, 0);
-  } finally {
-    badRequest.restore();
-  }
-});
+    if (!temp2faSecret) {
+      return Response.badRequest(ctx, "No 2FA setup in progress");
+    }
 
-Deno.test("verifyTwoFactor: returns success if verified", async () => {
-  const ctx = createMockCtx();
-  const stubInit = stub(
-    UserService,
-    "initialize",
-    async () =>
-      makeUserServiceStub({
-        verifyTwoFactor: async () => ({
-          verified: true,
-          recoveryCodes: ["code"],
-        }),
-      }),
-  );
-  const success = spy(Response, "success");
-  try {
-    await verifyTwoFactor(ctx);
-    assertSpyCall(success, 0);
-  } finally {
-    stubInit.restore();
-    success.restore();
-  }
-});
+    try {
+      const { verified, recoveryCodes } = await userService.verifyTwoFactor(
+        userId,
+        token,
+        temp2faSecret,
+      );
 
-Deno.test("disableTwoFactor: returns unauthorized if no user", async () => {
-  const ctx = createMockCtx({}, {
-    state: {
-      user: null,
-      session: {
-        set: spy(async () => {}),
-        get: spy(async () => "secret"),
-        delete: spy(async () => {}),
-      },
-    },
-  });
-  const unauthorized = spy(Response, "unauthorized");
-  try {
-    await disableTwoFactor(ctx);
-    assertSpyCall(unauthorized, 0);
-  } finally {
-    unauthorized.restore();
-  }
-});
+      if (!verified) {
+        return Response.badRequest(ctx, "Invalid verification code");
+      }
 
-Deno.test("disableTwoFactor: returns success if disabled", async () => {
-  const ctx = createMockCtx(
-    { password: "testpass", totp: "123456" }, // Provide required fields
-  );
-  const stubInit = stub(
-    UserService,
-    "initialize",
-    async () =>
-      makeUserServiceStub({
-        disableTwoFactor: async () => true,
-      }),
-  );
-  const success = spy(Response, "success");
-  try {
-    await disableTwoFactor(ctx);
-    assertSpyCall(success, 0);
-  } finally {
-    stubInit.restore();
-    success.restore();
+      ctx.state.session.delete("temp2faSecret");
+      return Response.success(ctx, { verified: true, recoveryCodes });
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+      throw error;
+    }
+  } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "setup_two_factor",
+    });
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Error setting up 2FA",
+    );
   }
-});
+}
+
+export async function disableTwoFactor(ctx: Context) {
+  HTTPMetrics.track("POST", "/2fa/disable");
+  try {
+    const user = ctx.state.user;
+    if (!user) {
+      ErrorCounter.add(1, {
+        type: "auth",
+        operation: "verify_2fa_unauthorized",
+      });
+
+      return Response.unauthorized(ctx, "Missing or invalid Token");
+    }
+
+    // verify user
+    const body = await ctx.request.body.json();
+    const req: DisableTwoFactorRequest = {
+      password: body.password?.trim(),
+      totp: body.totp.trim(),
+    };
+
+    try {
+      await userService.disableTwoFactor(
+        user.userId,
+        req.totp,
+        req.password,
+      );
+
+      return Response.success(ctx, { disable: true });
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+      throw error;
+    }
+  } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "setup_two_factor",
+    });
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Error setting up 2FA",
+    );
+  }
+}

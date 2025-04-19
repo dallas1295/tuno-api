@@ -1,10 +1,10 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { Context } from "@oak/oak";
 import { deleteUser } from "../src/controllers/delete.ts";
-import { UserService } from "../src/services/user.ts";
 import { tokenService } from "../src/services/token.ts";
 import { connectToDb } from "../src/config/db.ts";
 import { User } from "../src/models/user.ts";
+import { initializeServices, userService } from "../src/config/serviceSetup.ts";
 
 interface ResponseData {
   data?: string;
@@ -37,7 +37,7 @@ Deno.test({
   sanitizeOps: false,
 
   async fn(t) {
-    let userService: UserService;
+    await initializeServices();
     let testUser: User;
     let userTokens: { accessToken: string; refreshToken: string };
 
@@ -45,7 +45,6 @@ Deno.test({
       try {
         const client = await connectToDb();
         await client.db().collection("users").deleteMany({});
-        userService = await UserService.initialize();
       } catch (error) {
         console.error("Connection failed aborting test");
         throw error;

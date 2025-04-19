@@ -4,9 +4,9 @@ import { logout } from "../src/controllers/logout.ts";
 import { login } from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
 import { tokenService } from "../src/services/token.ts";
-import { UserService } from "../src/services/user.ts";
 import { User } from "../src/models/user.ts";
 import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
+import { initializeServices, userService } from "../src/config/serviceSetup.ts";
 
 interface ResponseData {
   data?: {
@@ -45,7 +45,7 @@ Deno.test({
   sanitizeOps: false,
 
   async fn(t) {
-    let userService: UserService;
+    await initializeServices();
     let testUser: User;
 
     // Setup: Initialize MongoDB connection
@@ -53,7 +53,6 @@ Deno.test({
       try {
         const client = await connectToDb();
         await client.db().collection("users").deleteMany({});
-        userService = await UserService.initialize();
       } catch (error) {
         console.error("Connection failed aborting test");
         throw error;

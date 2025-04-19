@@ -7,7 +7,7 @@ import {
   withTwoFactor,
 } from "../src/controllers/login.ts";
 import { Response } from "../src/utils/response.ts";
-import { UserService } from "../src/services/user.ts";
+import { initializeServices, userService } from "../src/config/serviceSetup.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
 
@@ -40,7 +40,8 @@ Deno.test({
   sanitizeOps: false,
 
   async fn(t) {
-    let userService: UserService;
+    await initializeServices(); // Ensure services are initialized before running any tests
+
     let testUser: User;
     let totp: OTPAuth.TOTP | undefined;
     // Setup: Initialize MongoDB connection
@@ -48,7 +49,6 @@ Deno.test({
       try {
         const client = await connectToDb();
         await client.db().collection("users").deleteMany({});
-        userService = await UserService.initialize();
       } catch (error) {
         console.error("Connection failed aborting test");
         throw error;
@@ -273,8 +273,8 @@ Deno.test({
       );
     });
 
-    // Cleanup
-    await t.step("cleanup: delete test user and close connection", async () => {
+    // Cleanup: delete test user
+    await t.step("cleanup: delete test user", async () => {
       if (testUser) {
         await userService.deleteUser(
           testUser.userId,
@@ -282,7 +282,6 @@ Deno.test({
           "Test123!@#$",
           totp ? totp.generate() : undefined,
         );
-        await closeDatabaseConnection();
       }
     });
   },
@@ -294,6 +293,8 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn(t) {
+    await initializeServices(); // Ensure services are initialized before running any tests
+
     // Setup: Initialize MongoDB connection
     await t.step("setup: initialize mongodb", async () => {
       try {
@@ -305,7 +306,6 @@ Deno.test({
       }
     });
 
-    let userService: UserService;
     let testUser: User;
     let twoFactorSetup: {
       qrCode: string;
@@ -316,7 +316,6 @@ Deno.test({
 
     // Setup: Create a test user with 2FA enabled
     await t.step("setup: create test user with 2FA", async () => {
-      userService = await UserService.initialize();
       const createdUser = await userService.createUser(
         "testuser2fa",
         "test2fa@example.com",
@@ -336,14 +335,15 @@ Deno.test({
         period: 30,
         secret: OTPAuth.URI.parse(twoFactorSetup.uri).secret,
       });
-    }),
-      await t.step("should return 400 for invalid input", async () => {
-        const ctx = createMockContext({});
-        await withTwoFactor(ctx);
-        const responseData = ctx.response.body as ResponseData;
-        assertEquals(ctx.response.status, 400);
-        assertEquals(responseData.error, "Invalid input");
-      });
+    });
+
+    await t.step("should return 400 for invalid input", async () => {
+      const ctx = createMockContext({});
+      await withTwoFactor(ctx);
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 400);
+      assertEquals(responseData.error, "Invalid input");
+    });
 
     await t.step("should return 400 for invalid TOTP code format", async () => {
       const ctx = createMockContext({
@@ -393,5 +393,15 @@ Deno.test({
       assertExists(responseData.data?.token);
       assertExists(responseData.data?.user);
     });
+  },
+});
+
+// Global teardown: close DB connection after all tests (if not already closed)
+Deno.test({
+  name: "Global teardown: close DB connection (2FA)",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    await closeDatabaseConnection();
   },
 });
