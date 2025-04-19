@@ -160,6 +160,18 @@ export class NoteService {
     return updatedNote;
   }
 
+  async getNote(userId: string, noteId: string): Promise<Note> {
+    if (!userId || !noteId) throw new Error("User ID and Note ID are required");
+
+    const note = await this.noteRepo.getNote(userId, noteId);
+
+    if (!note) {
+      throw new Error("Note not found");
+    }
+
+    return note;
+  }
+
   async deleteNote(
     userId: string,
     noteId: string,
