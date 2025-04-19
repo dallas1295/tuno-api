@@ -1,8 +1,8 @@
 import { Response } from "../utils/response.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { Context } from "@oak/oak";
-import { UserService } from "../services/user.ts";
 import { DeleteUserRequest } from "../models/user.ts";
+import { userService } from "../config/serviceSetup.ts";
 import { tokenService } from "../services/token.ts";
 
 export async function deleteUser(ctx: Context) {
@@ -29,8 +29,6 @@ export async function deleteUser(ctx: Context) {
     }
 
     try {
-      const userService = await UserService.initialize();
-
       const user = await userService.findById(userId);
       if (!user) {
         return Response.unauthorized(ctx, "User not found");

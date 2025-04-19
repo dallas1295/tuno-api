@@ -1,5 +1,5 @@
-import { UserService } from "../services/user.ts";
 import { Response } from "../utils/response.ts";
+import { userService } from "../config/serviceSetup.ts";
 import { ChangePasswordRequest } from "../models/user.ts";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 import { Context } from "@oak/oak";
@@ -31,7 +31,6 @@ export async function changePassword(ctx: Context) {
       );
     }
 
-    const userService = await UserService.initialize();
     const user = await userService.findById(userId);
 
     if (!user) {

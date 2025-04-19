@@ -1,6 +1,6 @@
 import { ChangeEmailRequest } from "../models/user.ts";
-import { UserService } from "../services/user.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
+import { userService } from "../config/serviceSetup.ts";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
@@ -28,8 +28,6 @@ export async function changeEmail(ctx: Context) {
     }
 
     try {
-      const userService = await UserService.initialize();
-
       const user = await userService.findById(userId);
 
       if (!user) {

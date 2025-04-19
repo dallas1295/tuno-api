@@ -1,7 +1,8 @@
-import { UserService } from "../services/user.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
+import { userService } from "../config/serviceSetup.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
+import { makeUserLink } from "../utils/makeLinks.ts";
 
 export async function getProfile(ctx: Context) {
   HTTPMetrics.track("GET", "/profile");
@@ -12,7 +13,6 @@ export async function getProfile(ctx: Context) {
       return Response.unauthorized(ctx, "Missing or invalid Token");
     }
 
-    const userService = await UserService.initialize();
     const user = await userService.findById(userId);
 
     if (!user) {
@@ -24,16 +24,10 @@ export async function getProfile(ctx: Context) {
     const profile = {
       ...userData,
       links: {
-        self: { href: `/users/${user.userId}/profile`, method: "GET" },
-        changeEmail: { href: `/users/${user.userId}/email`, method: "PUT" },
-        changePassword: {
-          href: `/users/${user.userId}/password`,
-          method: "PUT",
-        },
-        changeUsername: {
-          href: `/users/${user.userId}/username`,
-          method: "PUT",
-        },
+        self: makeUserLink(user.userId, "self"),
+        changeEmail: makeUserLink(user.userId, "changeEmail"),
+        changePassword: makeUserLink(user.userId, "changePassword"),
+        changeUsername: makeUserLink(user.userId, "changeUsername"),
         logout: { href: `/api/auth/logout` },
       },
     };

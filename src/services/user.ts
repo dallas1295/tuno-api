@@ -5,30 +5,14 @@ import { ErrorCounter } from "../utils/metrics.ts";
 import { generateRecoveryCodes } from "../utils/recovery.ts";
 import { verifyTOTP } from "../utils/totp.ts";
 import { hashPassword, verifyPassword } from "../services/password.ts";
-import { connectToDb } from "../config/db.ts";
 import * as OTPAuth from "@hectorm/otpauth";
 import * as denoqr from "@openjs/denoqr";
 import "@std/dotenv/load";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 
 export class UserService {
-  private userRepo!: UserRepo;
+  constructor(private userRepo: UserRepo) {}
 
-  private constructor() {}
-
-  private static instance?: UserService;
-
-  static async initialize(): Promise<UserService> {
-    const service = new UserService();
-    try {
-      const dbClient = await connectToDb();
-      service.userRepo = new UserRepo(dbClient);
-      return service;
-    } catch (error) {
-      console.error("Failed to initialize UserService: ", error);
-      throw error;
-    }
-  }
   async createUser(
     username: string,
     email: string,

@@ -1,14 +1,22 @@
-import { NoteService } from "../services/note.ts";
-import { newNotesPageResponse, NoteLink } from "../dto/note.ts";
-import { Context } from "@oak/oak";
+import { newNotesPageResponse, NoteLink, toNoteResponse } from "../dto/note.ts";
 import { Response } from "../utils/response.ts";
 import { Note } from "../models/note.ts";
+import { HTTPMetrics } from "../utils/metrics.ts";
+import { noteService, userService } from "../config/serviceSetup.ts";
+import { Context } from "@oak/oak";
+import { makeNoteLink } from "../utils/makeLinks.ts";
 
 export async function searchNotes(ctx: Context) {
+  HTTPMetrics.track("GET", "/notes/search");
   try {
     const userId = ctx.state.user?.userId;
     if (!userId) {
       return Response.unauthorized(ctx, "User not found");
+    }
+
+    const validUser = await userService.findById(userId);
+    if (!validUser) {
+      return Response.forbidden(ctx, "User ID does not exist");
     }
 
     const url = ctx.request.url;
@@ -20,7 +28,6 @@ export async function searchNotes(ctx: Context) {
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const pageSize = parseInt(url.searchParams.get("page_size") || "10", 10);
 
-    const noteService = await NoteService.initialize();
     const { notes, totalCount } = await noteService.searchNotes({
       userId,
       query,
@@ -54,19 +61,17 @@ export async function searchNotes(ctx: Context) {
       links["prev"] = { href: prevPageURL, method: "GET" };
     }
 
-    const getNoteLinks = (note: Note) => ({
-      self: { href: `${baseURL}/note/${note.noteId}`, method: "GET" },
-      update: { href: `${baseURL}/note/${note.noteId}`, method: "PUT" },
-      delete: { href: `${baseURL}/note/${note.noteId}`, method: "DELETE" },
-    });
-
     const response = newNotesPageResponse(
       notes,
       totalCount,
       pageCount,
       page,
       links,
-      getNoteLinks,
+      (note) => ({
+        self: makeNoteLink(note.noteId, "self"),
+        update: makeNoteLink(note.noteId, "update"),
+        delete: makeNoteLink(note.noteId, "delete"),
+      }),
     );
 
     return Response.success(ctx, response);
@@ -75,5 +80,58 @@ export async function searchNotes(ctx: Context) {
       ctx,
       err instanceof Error ? err.message : "Failed to search notes",
     );
+  }
+}
+
+export async function newNote(ctx: Context) {
+  try {
+    const userId = ctx.state.user?.userId;
+    if (!userId) {
+      return Response.unauthorized(ctx, "User not found");
+    }
+
+    const body: Note = await ctx.request.body.json();
+    if (!body) {
+      return Response.badRequest(ctx, "Note not provided");
+    }
+
+    try {
+      const userId = await ctx.state?.userId;
+      if (!userId) {
+        return Response.unauthorized(ctx, "User not found");
+      }
+
+      const validUser = await userService.findById(userId);
+      if (!validUser) {
+        return Response.forbidden(ctx, "User ID does not exist");
+      }
+
+      const { noteName, content, tags, isPinned } = await ctx.request.body
+        .json();
+      const createdNote = await noteService.createNote(
+        userId,
+        noteName,
+        content,
+        tags,
+        isPinned,
+      );
+
+      const links = {
+        self: makeNoteLink(createdNote.noteId, "self"),
+        update: makeNoteLink(createdNote.noteId, "update"),
+        delete: makeNoteLink(createdNote.noteId, "delete"),
+      };
+
+      const response = toNoteResponse(createdNote, links);
+
+      return Response.success(ctx, response);
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+
+      throw error;
+    }
+  } catch (error) {
   }
 }

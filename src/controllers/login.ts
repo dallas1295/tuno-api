@@ -5,10 +5,11 @@ import { toUserResponse } from "../dto/user.ts";
 import { verifyPassword } from "../services/password.ts";
 import { tokenService } from "../services/token.ts";
 import { verifyTOTP } from "../utils/totp.ts";
-import { UserService } from "../services/user.ts";
 import { RateLimiter } from "../utils/rateLimiter.ts";
 import { Context } from "@oak/oak";
 import * as OTPAuth from "@hectorm/otpauth";
+import { userService } from "../config/serviceSetup.ts";
+import { makeUserLink } from "../utils/makeLinks.ts";
 
 export async function login(ctx: Context) {
   HTTPMetrics.track("POST", "/login");
@@ -26,7 +27,6 @@ export async function login(ctx: Context) {
       );
     }
 
-    const userService = await UserService.initialize();
     const user = await userService.findByUsername(loginReq.username);
     if (!user) {
       await RateLimiter.trackAttempt(ctx.request.ip, loginReq.username);
@@ -65,7 +65,7 @@ export async function login(ctx: Context) {
 
       const token = await tokenService.generateTokenPair(user);
       const links = {
-        self: { href: `/users/${user.userId}`, method: "GET" },
+        self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
       };
       const userResponse = toUserResponse(user, links);
@@ -128,7 +128,7 @@ export async function withTwoFactor(ctx: Context) {
       return Response.unauthorized(ctx, "Invalid or expired 2FA session");
     }
 
-    const userService = await UserService.initialize();
+    // const userService = await UserService.initialize();
     const user = await userService.findById(payload.userId);
     if (!user) {
       await RateLimiter.trackAttempt(ctx.request.ip);
@@ -150,7 +150,7 @@ export async function withTwoFactor(ctx: Context) {
 
       const token = await tokenService.generateTokenPair(user);
       const links = {
-        self: { href: `/users/${user.userId}`, method: "GET" },
+        self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
       };
 
@@ -218,7 +218,7 @@ export async function withRecovery(ctx: Context) {
     }
 
     try {
-      const userService = await UserService.initialize();
+      // const userService = await UserService.initialize();
       const user = await userService.findById(payload.userId);
       if (!user) {
         await RateLimiter.trackAttempt(ctx.request.ip);
@@ -238,7 +238,7 @@ export async function withRecovery(ctx: Context) {
 
       const token = await tokenService.generateTokenPair(user);
       const links = {
-        self: { href: `users/${user.userId}`, method: "GET" },
+        self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
       };
 

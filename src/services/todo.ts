@@ -6,7 +6,6 @@ import {
   validateTags,
 } from "../utils/validators.ts";
 import { ErrorCounter } from "../utils/metrics.ts";
-import { connectToDb } from "../config/db.ts";
 
 export interface TodoStats {
   total: number;
@@ -21,25 +20,7 @@ export interface TodoStats {
 }
 
 export class TodoService {
-  private todoRepo!: TodoRepo;
-
-  private constructor() {}
-
-  private static instance?: TodoService;
-  static async initialize(): Promise<TodoService> {
-    if (TodoService.instance) {
-      return TodoService.instance;
-    }
-    const service = new TodoService();
-    try {
-      const dbClient = await connectToDb();
-      service.todoRepo = new TodoRepo(dbClient);
-      return service;
-    } catch (error) {
-      console.error("Failed to initialize NoteService: ", error);
-      throw error;
-    }
-  }
+  constructor(private todoRepo: TodoRepo) {}
 
   isTodoValid(todo: Todo): boolean {
     if (!todo.userId) return false;

@@ -2,8 +2,8 @@ import { User } from "../models/user.ts";
 import { Response } from "../utils/response.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { Context } from "@oak/oak";
-import { UserService } from "../services/user.ts";
 import { tokenService } from "../services/token.ts";
+import { userService } from "../config/serviceSetup.ts";
 
 export async function register(ctx: Context) {
   HTTPMetrics.track("POST", "/register");
@@ -19,7 +19,6 @@ export async function register(ctx: Context) {
       return Response.badRequest(ctx, "Missing required fields");
     }
 
-    const userService = await UserService.initialize();
     let user: User;
 
     try {

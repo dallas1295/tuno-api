@@ -1,8 +1,8 @@
 import { DisableTwoFactorRequest } from "../models/user.ts";
-import { UserService } from "../services/user.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { Response } from "../utils/response.ts";
 import { Context } from "@oak/oak";
+import { userService } from "../config/serviceSetup.ts";
 
 export async function enableTwoFactor(ctx: Context) {
   HTTPMetrics.track("POST", "/2fa/setup");
@@ -19,8 +19,6 @@ export async function enableTwoFactor(ctx: Context) {
     }
 
     try {
-      const userService = await UserService.initialize();
-
       const user = await userService.findById(userId);
       if (!user) {
         return Response.unauthorized(ctx, "User not found");
@@ -79,7 +77,6 @@ export async function verifyTwoFactor(ctx: Context) {
     }
 
     try {
-      const userService = await UserService.initialize();
       const { verified, recoveryCodes } = await userService.verifyTwoFactor(
         userId,
         token,
@@ -131,8 +128,6 @@ export async function disableTwoFactor(ctx: Context) {
     };
 
     try {
-      const userService = await UserService.initialize();
-
       await userService.disableTwoFactor(
         user.userId,
         req.totp,
