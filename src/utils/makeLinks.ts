@@ -8,20 +8,19 @@ export function makeUserLink(
     | "changePassword"
     | "changeUsername",
 ) {
-  const base = `/user/${id}`;
   switch (action) {
     case "self":
-      return { href: base, method: "GET" };
+      return { href: `/users/${id}/profile`, method: "GET" };
     case "update":
-      return { href: base, method: "PUT" };
+      return { href: `/users/${id}`, method: "PUT" };
     case "delete":
-      return { href: base, method: "DELETE" };
+      return { href: `/users/${id}`, method: "DELETE" };
     case "changeEmail":
-      return { href: `${base}/change-email`, method: "POST" };
+      return { href: `/users/${id}/email`, method: "PATCH" };
     case "changePassword":
-      return { href: `${base}/change-password`, method: "POST" };
+      return { href: `/users/${id}/password`, method: "PATCH" };
     case "changeUsername":
-      return { href: `${base}/change-username`, method: "POST" };
+      return { href: `/users/${id}/username`, method: "PATCH" };
     default:
       throw new Error(`Unknown action: ${action}`);
   }
