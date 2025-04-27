@@ -553,4 +553,26 @@ export class NoteRepo {
       timer.end();
     }
   }
+
+  async getNoteNames(userId: string): Promise<string[]> {
+    const timer = DatabaseMetrics.track("find", "note");
+    try {
+      const filter: Filter<Note> = { userId, isArchived: false };
+      const options: FindOptions<Note> = {
+        projection: { noteName: 1, _id: 0 },
+      };
+      const cursor = this.collection.find(filter, options);
+      const notes = await cursor.toArray();
+      return notes.map((note) => note.noteName);
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "database",
+        operation: "get_note_names_failed",
+      });
+      console.log("Failed to get note names");
+      throw error;
+    } finally {
+      timer.end();
+    }
+  }
 }
