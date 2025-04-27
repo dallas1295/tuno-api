@@ -85,7 +85,7 @@ Deno.test({
         const responseData = ctx.response.body as ResponseData;
 
         assertEquals(ctx.response.status, 401);
-        assertEquals(responseData.error, "Missing or invalid Token");
+        assertEquals(responseData.error, "Missing or invalid token");
       },
     );
 
