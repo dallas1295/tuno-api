@@ -201,39 +201,6 @@ export class NoteService {
     return newArchivedStatus;
   }
 
-  async fetchUserNotes(
-    userId: string,
-    page = 1,
-    pageSize = 15,
-    sortField = "createdAt",
-    sortOrder: "asc" | "desc" = "desc",
-  ): Promise<{ notes: Note[]; totalCount: number }> {
-    try {
-      if (!userId) {
-        throw new Error("User ID is required");
-      }
-
-      const sortOrderValue = sortOrder === "asc" ? 1 : -1;
-
-      const result = await this.noteRepo.getPaginatedNotes(
-        userId,
-        page,
-        pageSize,
-        sortField,
-        sortOrderValue,
-      );
-
-      return result;
-    } catch (error) {
-      ErrorCounter.add(1, {
-        type: "service",
-        operation: "fetch_user_notes_failed",
-      });
-      console.error("Failed to fetch user notes", error);
-      throw error;
-    }
-  }
-
   async fetchArchivedNotes(
     userId: string,
     page = 1,
@@ -415,6 +382,23 @@ export class NoteService {
         operation: "get_note_tags_failed",
       });
       console.error("failed to get note tags", error);
+      throw error;
+    }
+  }
+
+  async getNoteNames(userId: string): Promise<string[]> {
+    try {
+      if (!userId) {
+        throw new Error("User ID is required");
+      }
+      const noteNames = await this.noteRepo.getNoteNames(userId);
+      return noteNames;
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "service",
+        operation: "get_note_names_failed",
+      });
+      console.error("Failed to get note names", error);
       throw error;
     }
   }
