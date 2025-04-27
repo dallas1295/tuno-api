@@ -14,7 +14,7 @@ export async function changePassword(ctx: Context) {
       type: "auth",
       operation: "change_password_unauthorized",
     });
-    return Response.unauthorized(ctx, "Missing or invalid Token");
+    return Response.unauthorized(ctx, "Missing or invalid token");
   }
 
   try {
