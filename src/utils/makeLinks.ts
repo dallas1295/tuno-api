@@ -37,3 +37,15 @@ export function makeNoteLink(id: string, action: "self" | "update" | "delete") {
       return { href: base, method: "DELETE" };
   }
 }
+
+export function makeTodoLink(id: string, action: "self" | "update" | "delete") {
+  const base = `/todo/${id}`;
+  switch (action) {
+    case "self":
+      return { href: base, method: "get" };
+    case "update":
+      return { href: base, method: "put" };
+    case "delete":
+      return { href: base, method: "delete" };
+  }
+}
