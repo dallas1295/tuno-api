@@ -53,7 +53,6 @@ export class TodoService {
     return todo;
   }
 
-  // business logic
   async createTodo(todo: Todo): Promise<Todo> {
     try {
       this.prepTodo(todo);
