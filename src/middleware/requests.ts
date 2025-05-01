@@ -24,8 +24,6 @@ export async function requestTracingMiddleware(ctx: Context, next: Next) {
   const requestId = ctx.request.headers.get("X-Request-ID") ||
     crypto.randomUUID();
 
-  ctx.request.headers.set("X-Request-ID", requestId);
-
   ctx.response.headers.set("X-Request-ID", requestId);
 
   await next();
