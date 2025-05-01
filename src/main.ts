@@ -81,5 +81,5 @@ app.use(authMiddleware);
 app.use(protectedRouter.routes());
 app.use(protectedRouter.allowedMethods());
 
-console.log("Server running on http://localhost:1004");
-await app.listen({ port: 1004 });
+console.log("Server running on http://localhost:3000");
+await app.listen({ port: 3000 });
