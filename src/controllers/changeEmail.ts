@@ -3,18 +3,25 @@ import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { userService } from "../config/serviceSetup.ts";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
 import { Response } from "../utils/response.ts";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 
-export async function changeEmail(ctx: Context) {
+export async function changeEmail(
+  ctx: RouterContext<"/api/:userId/change-email">,
+) {
   HTTPMetrics.track("PUT", "/change-email");
 
-  const userId = ctx.state.user?.userId;
-  if (!userId) {
+  const tokenUserId = ctx.state.user?.userId;
+  const paramUserId = ctx.params?.userId;
+
+  if (!tokenUserId || !paramUserId || tokenUserId !== paramUserId) {
     ErrorCounter.add(1, {
       type: "auth",
       operation: "change_email_unauthorized",
     });
-    return Response.unauthorized(ctx, "Missing or invalid Token");
+    return Response.unauthorized(
+      ctx,
+      "Unauthorized: userId mismatch or missing token",
+    );
   }
 
   try {
@@ -28,7 +35,7 @@ export async function changeEmail(ctx: Context) {
     }
 
     try {
-      const user = await userService.findById(userId);
+      const user = await userService.findById(tokenUserId);
 
       if (!user) {
         return Response.unauthorized(ctx, "User not found");
@@ -37,12 +44,9 @@ export async function changeEmail(ctx: Context) {
       await userService.updateEmail(user.userId, req.newEmail);
     } catch (error) {
       if (error instanceof Error) {
-        if (error instanceof Error) {
-          Response.badRequest(ctx, error.message);
-        }
-
-        throw error;
+        Response.badRequest(ctx, error.message);
       }
+      throw error;
     }
 
     return Response.success(ctx, "User email has been updated");

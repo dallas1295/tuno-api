@@ -2,19 +2,26 @@ import { Response } from "../utils/response.ts";
 import { userService } from "../config/serviceSetup.ts";
 import { ChangePasswordRequest } from "../models/user.ts";
 import { ChangeRateLimit } from "../utils/rateLimiter.ts";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 
-export async function changePassword(ctx: Context) {
+export async function changePassword(
+  ctx: RouterContext<"/api/:userId/change-password">,
+) {
   HTTPMetrics.track("PUT", "/change-password");
 
-  const userId = ctx.state?.user?.userId;
-  if (!userId) {
+  const tokenUserId = ctx.state?.user?.userId;
+  const paramUserId = ctx.params?.userId;
+
+  if (!tokenUserId || !paramUserId || tokenUserId !== paramUserId) {
     ErrorCounter.add(1, {
       type: "auth",
       operation: "change_password_unauthorized",
     });
-    return Response.unauthorized(ctx, "Missing or invalid token");
+    return Response.unauthorized(
+      ctx,
+      "Unauthorized: userId mismatch or missing token",
+    );
   }
 
   try {
@@ -31,14 +38,10 @@ export async function changePassword(ctx: Context) {
       );
     }
 
-    const user = await userService.findById(userId);
+    const user = await userService.findById(tokenUserId);
 
     if (!user) {
       return Response.unauthorized(ctx, "User not found");
-    }
-
-    if (!req.newPassword || !req.oldPassword) {
-      return Response.badRequest(ctx, "new or existing password not provided");
     }
 
     if (req.newPassword === req.oldPassword) {
@@ -55,7 +58,6 @@ export async function changePassword(ctx: Context) {
       if (error instanceof Error) {
         Response.badRequest(ctx, error.message);
       }
-
       throw error;
     }
 

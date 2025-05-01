@@ -103,13 +103,20 @@ export async function searchNotes(ctx: Context) {
   }
 }
 
-export async function newNote(ctx: Context) {
+export async function newNote(ctx: RouterContext<"/api/:userId/notes/create">) {
   HTTPMetrics.track("PUT", "/notes/create");
 
   try {
-    const userId = ctx.state.user?.userId;
-    if (!userId) {
+    const userIdToken = ctx.state.user?.userId;
+    if (!userIdToken) {
       return Response.unauthorized(ctx, "User not found");
+    }
+    const userIdParams = ctx.params.userId;
+    if (userIdToken !== userIdParams) {
+      return Response.forbidden(
+        ctx,
+        "Token userId and Context userId do not match",
+      );
     }
 
     const body: Note = await ctx.request.body.json();
@@ -118,7 +125,7 @@ export async function newNote(ctx: Context) {
     }
 
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdToken);
       if (!validUser) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
@@ -126,7 +133,7 @@ export async function newNote(ctx: Context) {
       const { noteName, content, tags, isPinned } = await ctx.request.body
         .json();
       const createdNote = await noteService.createNote(
-        userId,
+        userIdToken,
         noteName,
         content,
         tags,
@@ -161,18 +168,21 @@ export async function newNote(ctx: Context) {
   }
 }
 
-export async function updateNote(ctx: RouterContext<"/note/:id">) {
-  HTTPMetrics.track("PUT", "/note/:id/update");
+export async function updateNote(
+  ctx: RouterContext<"/api/:userId/note/:id/update">,
+) {
+  HTTPMetrics.track("PUT", "/api/:userId/note/:id/update");
 
   try {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
     const noteId = ctx.params.id;
-    const userId = ctx.state.user?.userId;
 
     if (!noteId) {
       return Response.badRequest(ctx, "Note ID not found");
     }
 
-    if (!userId) {
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "update_notes_unauthorized",
@@ -180,8 +190,12 @@ export async function updateNote(ctx: RouterContext<"/note/:id">) {
       return Response.unauthorized(ctx, "User not found");
     }
 
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only update your own notes");
+    }
+
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         ErrorCounter.add(1, {
           type: "auth",
@@ -231,18 +245,21 @@ export async function updateNote(ctx: RouterContext<"/note/:id">) {
   }
 }
 
-export async function deleteNote(ctx: RouterContext<"/note/:id">) {
-  HTTPMetrics.track("DELETE", "note/:id/delete");
+export async function deleteNote(
+  ctx: RouterContext<"/api/:userId/note/:id/delete">,
+) {
+  HTTPMetrics.track("DELETE", "/api/:userId/note/:id/delete");
 
   try {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
     const noteId = ctx.params.id;
-    const userId = ctx.state.user?.userId;
 
     if (!noteId) {
       return Response.badRequest(ctx, "Note ID not found");
     }
 
-    if (!userId) {
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "update_notes_unauthorized",
@@ -250,8 +267,12 @@ export async function deleteNote(ctx: RouterContext<"/note/:id">) {
       return Response.unauthorized(ctx, "User not found");
     }
 
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only delete your own notes");
+    }
+
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         ErrorCounter.add(1, {
           type: "auth",
@@ -260,7 +281,7 @@ export async function deleteNote(ctx: RouterContext<"/note/:id">) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
 
-      const validNote = await noteService.getNote(userId, noteId);
+      const validNote = await noteService.getNote(userIdFromToken, noteId);
       if (!validNote) {
         return Response.notFound(ctx, "Note does not exist");
       }
@@ -287,11 +308,16 @@ export async function deleteNote(ctx: RouterContext<"/note/:id">) {
   }
 }
 
-export async function showSingleNote(ctx: RouterContext<"/note/:id">) {
-  HTTPMetrics.track("GET", "note/:id");
+export async function showSingleNote(
+  ctx: RouterContext<"/api/:userId/note/:id">,
+) {
+  HTTPMetrics.track("GET", "/api/:userId/note/:id");
 
-  const userId = ctx.state.user?.userId;
-  if (!userId) {
+  const userIdFromToken = ctx.state.user?.userId;
+  const userIdFromParams = ctx.params.userId;
+  const noteId = ctx.params.id;
+
+  if (!userIdFromToken) {
     ErrorCounter.add(1, {
       type: "auth",
       operation: "search_notes_unauthorized",
@@ -299,14 +325,17 @@ export async function showSingleNote(ctx: RouterContext<"/note/:id">) {
     return Response.unauthorized(ctx, "Missing or invalid token");
   }
 
+  if (userIdFromToken !== userIdFromParams) {
+    return Response.forbidden(ctx, "You can only view your own notes");
+  }
+
   try {
-    const noteId = ctx.params.id;
     if (!noteId) {
       return Response.badRequest(ctx, "Note id not provided");
     }
 
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         return Response.unauthorized(ctx, "User not found");
       }
@@ -344,11 +373,13 @@ export async function showSingleNote(ctx: RouterContext<"/note/:id">) {
   }
 }
 
-export async function showAllNotes(ctx: Context) {
-  HTTPMetrics.track("GET", "/notes/user");
+export async function showAllNotes(ctx: RouterContext<"/api/:userId/notes">) {
+  HTTPMetrics.track("GET", "/api/:userId/notes");
   try {
-    const userId = ctx.state.user?.userId;
-    if (!userId) {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
+
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "get_user_notes_unauthorized",
@@ -356,7 +387,11 @@ export async function showAllNotes(ctx: Context) {
       return Response.unauthorized(ctx, "User not found");
     }
 
-    const validUser = await userService.findById(userId);
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only view your own notes");
+    }
+
+    const validUser = await userService.findById(userIdFromToken);
     if (!validUser) {
       ErrorCounter.add(1, {
         type: "auth",
@@ -375,7 +410,7 @@ export async function showAllNotes(ctx: Context) {
 
     try {
       const { notes, totalCount } = await noteService.searchNotes({
-        userId,
+        userId: userIdFromToken,
         query: "",
         tags,
         sortBy,
@@ -387,7 +422,10 @@ export async function showAllNotes(ctx: Context) {
       const pageCount = Math.ceil(totalCount / pageSize);
       const baseURL = `${url.protocol}//${url.host}`;
       const links: { [key: string]: NoteLink } = {
-        self: { href: `${baseURL}/notes/user`, method: "GET" },
+        self: {
+          href: `${baseURL}/api/${userIdFromToken}/notes`,
+          method: "GET",
+        },
       };
 
       const response = newNotesPageResponse(
@@ -422,25 +460,29 @@ export async function showAllNotes(ctx: Context) {
   }
 }
 
-export async function pinNote(ctx: RouterContext<"/note/:id/pin">) {
-  HTTPMetrics.track("PUT", "/note/:id/pin");
+export async function pinNote(ctx: RouterContext<"/api/:userId/note/:id/pin">) {
+  HTTPMetrics.track("PUT", "/api/:userId/note/:id/pin");
   try {
     const noteId = ctx.params.id;
-    const userId = ctx.state.user?.userId;
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
 
     if (!noteId) {
       return Response.badRequest(ctx, "Note ID not found");
     }
-    if (!userId) {
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "pin_note_unauthorized",
       });
       return Response.unauthorized(ctx, "User not found");
     }
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only pin your own notes");
+    }
 
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
@@ -467,26 +509,33 @@ export async function pinNote(ctx: RouterContext<"/note/:id/pin">) {
 }
 
 export async function updatePinPosition(
-  ctx: RouterContext<"/note/:id/pin/position">,
+  ctx: RouterContext<"/api/:userId/note/:id/pin/position">,
 ) {
-  HTTPMetrics.track("PUT", "/note/:id/pin/position");
+  HTTPMetrics.track("PUT", "/api/:userId/note/:id/pin/position");
   try {
     const noteId = ctx.params.id;
-    const userId = ctx.state.user?.userId;
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
 
     if (!noteId) {
       return Response.badRequest(ctx, "Note ID not found");
     }
-    if (!userId) {
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "update_pin_position_unauthorized",
       });
       return Response.unauthorized(ctx, "User not found");
     }
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(
+        ctx,
+        "You can only update pin positions for your own notes",
+      );
+    }
 
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
@@ -517,20 +566,26 @@ export async function updatePinPosition(
   }
 }
 
-export async function showNoteTags(ctx: Context) {
-  HTTPMetrics.track("GET", "/notes/tags");
+export async function showNoteTags(
+  ctx: RouterContext<"/api/:userId/notes/tags">,
+) {
+  HTTPMetrics.track("GET", "/api/:userId/notes/tags");
   try {
-    const userId = ctx.state.user?.userId;
-    if (!userId) {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "get_note_tags_unauthorized",
       });
       return Response.unauthorized(ctx, "User not found");
     }
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only view your own note tags");
+    }
 
     try {
-      const validUser = await userService.findById(userId);
+      const validUser = await userService.findById(userIdFromToken);
       if (!validUser) {
         ErrorCounter.add(1, {
           type: "auth",
@@ -539,7 +594,7 @@ export async function showNoteTags(ctx: Context) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
 
-      const tagsWithCount = await noteService.getNoteTags(userId);
+      const tagsWithCount = await noteService.getNoteTags(userIdFromToken);
       return Response.success(ctx, { tags: tagsWithCount });
     } catch (error) {
       if (error instanceof Error) {
@@ -559,19 +614,25 @@ export async function showNoteTags(ctx: Context) {
   }
 }
 
-export async function showNoteNames(ctx: Context) {
-  HTTPMetrics.track("GET", "/notes/names");
+export async function showNoteNames(
+  ctx: RouterContext<"/api/:userId/notes/names">,
+) {
+  HTTPMetrics.track("GET", "/api/:userId/notes/names");
   try {
-    const userId = ctx.state.user?.userId;
-    if (!userId) {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
+    if (!userIdFromToken) {
       ErrorCounter.add(1, {
         type: "auth",
         operation: "get_note_names_unauthorized",
       });
       return Response.unauthorized(ctx, "User not found");
     }
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only view your own note names");
+    }
 
-    const validUser = await userService.findById(userId);
+    const validUser = await userService.findById(userIdFromToken);
     if (!validUser) {
       ErrorCounter.add(1, {
         type: "auth",
@@ -581,7 +642,7 @@ export async function showNoteNames(ctx: Context) {
     }
 
     try {
-      const noteNames = await noteService.getNoteNames(userId);
+      const noteNames = await noteService.getNoteNames(userIdFromToken);
       return Response.success(ctx, { noteNames });
     } catch (error) {
       if (error instanceof Error) {

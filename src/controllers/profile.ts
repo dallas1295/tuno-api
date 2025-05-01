@@ -1,19 +1,23 @@
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { userService } from "../config/serviceSetup.ts";
 import { Response } from "../utils/response.ts";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 import { makeUserLink } from "../utils/makeLinks.ts";
 
-export async function getProfile(ctx: Context) {
-  HTTPMetrics.track("GET", "/profile");
+export async function getProfile(ctx: RouterContext<"/api/:userId/profile">) {
+  HTTPMetrics.track("GET", "/api/:userId/profile");
 
   try {
-    const userId = ctx.state.user?.userId;
-    if (!userId) {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
+    if (!userIdFromToken) {
       return Response.unauthorized(ctx, "Missing or invalid Token");
     }
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only view your own profile");
+    }
 
-    const user = await userService.findById(userId);
+    const user = await userService.findById(userIdFromToken);
 
     if (!user) {
       return Response.unauthorized(ctx, "User not found");
