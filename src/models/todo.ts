@@ -19,7 +19,7 @@ export interface Todo {
   isComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
-  tags?: string[];
+  tags: string[];
   priority?: keyof typeof Priority;
   dueDate?: Date;
   reminderAt?: Date;
