@@ -1,4 +1,4 @@
-import { Priority, Todo } from "../models/todo.ts";
+import { Pattern, Priority, Todo } from "../models/todo.ts";
 import { TodoRepo } from "../repositories/todo.ts";
 import {
   validatePriority,
@@ -22,7 +22,7 @@ export interface TodoStats {
 export class TodoService {
   constructor(private todoRepo: TodoRepo) {}
 
-  isTodoValid(todo: Todo): boolean {
+  private isTodoValid(todo: Todo): boolean {
     if (!todo.userId) return false;
 
     const todoName = todo.todoName?.trim() ?? "";
@@ -35,27 +35,82 @@ export class TodoService {
       return false;
     }
 
-    if (todo.isRecurring) {
-      const validatedRecurring = validateRecurringPattern(
-        todo.recurringPattern,
-      );
-      if (!validatedRecurring) return false;
-      todo.recurringPattern = validatedRecurring;
-    }
-
     return true;
   }
 
-  prepTodo(todo: Todo): Todo {
-    todo.tags = validateTags(todo.tags);
-    todo.priority = validatePriority(todo.priority);
-    todo.isComplete = !!todo.isComplete;
-    return todo;
+  private validateProperties(
+    tags: string[],
+    priority?: keyof typeof Priority,
+    isRecurring?: boolean,
+    recurringPattern?: keyof typeof Pattern,
+  ): {
+    validTags: string[];
+    validPriority: keyof typeof Priority | undefined;
+    validPattern?: keyof typeof Pattern;
+  } {
+    let validTags: string[];
+    let validPattern: keyof typeof Pattern | undefined;
+
+    try {
+      validTags = validateTags(tags);
+    } catch (error) {
+      throw new Error(`${error}`);
+    }
+
+    if (isRecurring) {
+      try {
+        validPattern = validateRecurringPattern(recurringPattern);
+      } catch (error) {
+        throw new Error(`Recurring pattern validation failed: ${error}`);
+      }
+    }
+
+    const validPriority = validatePriority(priority);
+
+    return { validTags, validPriority, validPattern };
   }
 
-  async createTodo(todo: Todo): Promise<Todo> {
+  async createTodo(
+    userId: string,
+    todoName: string,
+    description: string,
+    tags: string[],
+    priority?: keyof typeof Priority,
+    dueDate?: Date,
+    reminderAt?: Date,
+    isRecurring?: boolean,
+    recurringPattern?: keyof typeof Pattern,
+    recurrenceEnd?: Date,
+  ): Promise<Todo> {
     try {
-      this.prepTodo(todo);
+      if (!userId) {
+        throw new Error("User Id not found");
+      }
+
+      const { validTags, validPriority, validPattern } = this
+        .validateProperties(
+          tags,
+          priority,
+          isRecurring,
+          recurringPattern,
+        );
+
+      const todo: Todo = {
+        todoId: crypto.randomUUID(),
+        userId,
+        todoName: todoName.trim(),
+        description,
+        isComplete: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        tags: validTags,
+        priority: validPriority,
+        dueDate,
+        reminderAt,
+        isRecurring: !!isRecurring,
+        recurringPattern: validPattern,
+        recurrenceEnd,
+      };
 
       if (!this.isTodoValid(todo)) {
         ErrorCounter.add(1, {
@@ -64,6 +119,7 @@ export class TodoService {
         });
         throw new Error("Invalid todo");
       }
+
       const createdTodo = await this.todoRepo.createTodo(todo);
       return createdTodo;
     } catch (error) {
@@ -87,7 +143,22 @@ export class TodoService {
         throw new Error("Todo not found");
       }
 
-      const updatedTodo = this.prepTodo({ ...exists, ...updates });
+      const { validTags, validPriority, validPattern } = this
+        .validateProperties(
+          updates.tags ?? exists.tags,
+          updates.priority ?? exists.priority,
+          updates.isRecurring ?? exists.isRecurring,
+          updates.recurringPattern ?? exists.recurringPattern,
+        );
+
+      const updatedTodo: Todo = {
+        ...exists,
+        ...updates,
+        tags: validTags,
+        priority: validPriority,
+        recurringPattern: validPattern,
+        updatedAt: new Date(),
+      };
 
       if (!this.isTodoValid(updatedTodo)) {
         ErrorCounter.add(1, {
