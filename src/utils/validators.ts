@@ -26,9 +26,9 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-export function validateTags(tags?: string[]): string[] | undefined {
+export function validateTags(tags?: string[]): string[] {
   if (!tags || tags.length === 0 || tags.length === 0) {
-    return undefined;
+    return [];
   }
 
   const validTags = tags.map((tag) => tag.trim()).filter((tag) => tag !== "");
