@@ -51,7 +51,7 @@ export function validatePriority(
 ): keyof typeof Priority | undefined {
   if (!priority) return undefined;
 
-  if (Object.values(Priority).includes(priority)) {
+  if (Object.keys(Priority).includes(priority)) {
     return priority;
   }
 
