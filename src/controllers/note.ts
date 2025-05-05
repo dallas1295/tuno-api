@@ -1,6 +1,10 @@
-import { newNotesPageResponse, NoteLink, toNoteResponse } from "../dto/note.ts";
+import {
+  CreateNoteReq,
+  newNotesPageResponse,
+  NoteLink,
+  toNoteResponse,
+} from "../dto/note.ts";
 import { Response } from "../utils/response.ts";
-import { Note } from "../models/note.ts";
 import { ErrorCounter, HTTPMetrics } from "../utils/metrics.ts";
 import { noteService, userService } from "../config/serviceSetup.ts";
 import { Context, RouterContext } from "@oak/oak";
@@ -12,10 +16,6 @@ export async function searchNotes(ctx: Context) {
   try {
     const userId = ctx.state.user?.userId;
     if (!userId) {
-      ErrorCounter.add(1, {
-        type: "auth",
-        operation: "search_notes_unauthorized",
-      });
       return Response.unauthorized(ctx, "User not found");
     }
 
@@ -119,7 +119,7 @@ export async function newNote(ctx: RouterContext<"/api/:userId/notes/create">) {
       );
     }
 
-    const body: Note = await ctx.request.body.json();
+    const body: CreateNoteReq = await ctx.request.body.json();
     if (!body) {
       return Response.badRequest(ctx, "Note not provided");
     }
@@ -130,8 +130,7 @@ export async function newNote(ctx: RouterContext<"/api/:userId/notes/create">) {
         return Response.forbidden(ctx, "User ID does not exist");
       }
 
-      const { noteName, content, tags, isPinned } = await ctx.request.body
-        .json();
+      const { noteName, content, tags, isPinned } = body;
       const createdNote = await noteService.createNote(
         userIdToken,
         noteName,
@@ -205,6 +204,9 @@ export async function updateNote(
       }
 
       const validNote = await noteService.getNote(validUser.userId, noteId);
+      if (!validNote) {
+        return Response.badRequest(ctx, "Note Id is not valid");
+      }
 
       const updates = await ctx.request.body.json();
       if (!updates) {
