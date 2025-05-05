@@ -5,6 +5,13 @@ export interface NoteLink {
   method?: string;
 }
 
+export interface CreateNoteReq {
+  noteName: string;
+  content: string;
+  tags?: string[];
+  isPinned?: boolean;
+}
+
 export interface NoteResponse {
   noteId: string;
   noteName: string;
