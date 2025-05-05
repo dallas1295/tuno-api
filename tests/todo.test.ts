@@ -1,5 +1,13 @@
-import { assertEquals, assertExists } from "@std/assert";
-import { newTodo, updateTodo } from "../src/controllers/todo.ts";
+import { assert, assertEquals, assertExists, assertRejects } from "@std/assert";
+import {
+  deleteTodo,
+  newTodo,
+  todoCount,
+  todoStats,
+  todoTagList,
+  toggleComplete,
+  updateTodo,
+} from "../src/controllers/todo.ts";
 import {
   closeDatabaseConnection,
   connectToDb,
@@ -18,7 +26,7 @@ interface ResponseData {
   error?: string;
 }
 function createMockRouterContext<
-  T extends string = "/api/:userId/notes/create",
+  T extends string = "/api/:userId/todos/create",
 >(
   url: string,
   state: Record<string, unknown> = {},
@@ -84,11 +92,12 @@ Deno.test({
       assertExists(createdUser);
       testUser = createdUser;
     });
+
     await t.step(
       "should return unauthorized when no user in state",
       async () => {
         const ctx = createMockRouterContext(
-          "http://localhost/api/123/notes/create",
+          "http://localhost/api/123/todos/create",
           {},
           "PUT",
           {
@@ -102,16 +111,19 @@ Deno.test({
         assertEquals(responseData.error, "User not found");
       },
     );
+
     await t.step("should create a todo for valid user", async () => {
-      const ctx = createMockRouterContext(
-        `http://localhost/api/${testUser.userId}/notes/create`,
+      const ctx = createMockRouterContext<
+        "/api/:userId/todos/create"
+      >(
+        `http://localhost/api/${testUser.userId}/todos/create`,
         { user: { userId: testUser.userId } },
         "PUT",
         {
           todoName: "Created Todo",
           description: "This is a created todo.",
           tags: ["created"],
-          priority: 1,
+          priority: "low",
         },
         { userId: testUser.userId },
       );
@@ -124,11 +136,14 @@ Deno.test({
       assertEquals(responseData.data.tags[0], "created");
       testTodo = responseData.data;
     });
+
     await t.step(
       "should return forbidden if token userId and param userId do not match",
       async () => {
-        const ctx = createMockRouterContext(
-          `http://localhost/api/otheruser/notes/create`,
+        const ctx = createMockRouterContext<
+          "/api/:userId/todos/create"
+        >(
+          `http://localhost/api/otheruser/todos/create`,
           { user: { userId: testUser.userId } },
           "PUT",
           {
@@ -145,6 +160,7 @@ Deno.test({
         );
       },
     );
+
     await t.step("should update a todo for valid user", async () => {
       // First, create a todo to update
       const created = await todoService.createTodo(
@@ -166,13 +182,13 @@ Deno.test({
         priority: "high",
       };
       const ctx = createMockRouterContext<
-        "/api/:userId/note/:id/update"
+        "/api/:userId/todos/:todoId/update"
       >(
-        `http://localhost/api/${testUser.userId}/note/${created.todoId}/update`,
+        `http://localhost/api/${testUser.userId}/todos/${created.todoId}/update`,
         { user: { userId: testUser.userId } },
         "PUT",
         updates,
-        { userId: testUser.userId, id: created.todoId },
+        { userId: testUser.userId, todoId: created.todoId },
       );
 
       await updateTodo(ctx);
@@ -184,22 +200,235 @@ Deno.test({
       assertEquals(responseData.data.tags[0], "updated");
       assertEquals(responseData.data.priority, "high");
     });
+
     await t.step(
       "should return bad request when updating todo with missing id",
       async () => {
+        const updates = {
+          todoName: "Should Fail",
+          description: "No ID provided.",
+          tags: ["fail"],
+          priority: "low",
+        };
         const ctx = createMockRouterContext<
-          "/api/:userId/note/:id/update"
+          "/api/:userId/todos/:todoId/update"
         >(
-          `http://localhost/api/${testUser.userId}/note//update`,
+          `http://localhost/api/${testUser.userId}/todos//update`,
           { user: { userId: testUser.userId } },
           "PUT",
-          { todoName: "Should Fail" },
-          { userId: testUser.userId, id: "" },
+          updates,
+          { userId: testUser.userId }, // missing todoId
         );
         await updateTodo(ctx);
         const responseData = ctx.response.body as ResponseData;
         assertEquals(ctx.response.status, 400);
-        assertEquals(responseData.error, "Note ID not found");
+        assertEquals(responseData.error, "Todo ID not found");
+      },
+    );
+
+    await t.step("should delete a todo for valid user", async () => {
+      // First, create a todo to delete
+      const todoToDelete = await todoService.createTodo(
+        testUser.userId,
+        "Todo to Delete",
+        "Content to delete.",
+        ["delete"],
+        "low",
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+      );
+
+      const ctx = createMockRouterContext<
+        "/api/:userId/todo/:id/delete"
+      >(
+        `http://localhost/api/${testUser.userId}/todo/${todoToDelete.todoId}/delete`,
+        { user: { userId: testUser.userId } },
+        "DELETE",
+        {},
+        { userId: testUser.userId, id: todoToDelete.todoId },
+      );
+
+      await deleteTodo(ctx);
+
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 200);
+      assertEquals(responseData.data, "Todo successfully deleted");
+
+      // Confirm todo is actually deleted
+      await assertRejects(
+        async () =>
+          await todoService.getTodo(testUser.userId, todoToDelete.todoId),
+        Error,
+        "Todo does not exist",
+      );
+    });
+
+    await t.step("should return todo count for valid user", async () => {
+      // Create some todos for the user
+      await todoService.createTodo(
+        testUser.userId,
+        "Todo 1",
+        "First todo.",
+        ["count"],
+        "low",
+      );
+      await todoService.createTodo(
+        testUser.userId,
+        "Todo 2",
+        "Second todo.",
+        ["count"],
+        "medium",
+      );
+
+      const ctx = createMockRouterContext<
+        "/api/:userId/todos/count"
+      >(
+        `http://localhost/api/${testUser.userId}/todos/count`,
+        { user: { userId: testUser.userId } },
+        "GET",
+        {},
+        { userId: testUser.userId },
+      );
+
+      await todoCount(ctx);
+
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 200);
+      assertExists(responseData.data);
+      assertEquals(typeof responseData.data, "number");
+      assert(responseData.data >= 2);
+    });
+
+    await t.step(
+      "should return todo tags with counts for valid user",
+      async () => {
+        // Create todos with tags
+        await todoService.createTodo(
+          testUser.userId,
+          "Tag Todo 1",
+          "First tag todo.",
+          ["tag1", "tag2"],
+          "low",
+        );
+        await todoService.createTodo(
+          testUser.userId,
+          "Tag Todo 2",
+          "Second tag todo.",
+          ["tag2", "tag3"],
+          "medium",
+        );
+
+        const ctx = createMockRouterContext<
+          "/api/:userId/todos/tags"
+        >(
+          `http://localhost/api/${testUser.userId}/todos/tags`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+
+        await todoTagList(ctx);
+
+        const responseData = ctx.response.body as ResponseData;
+        assertEquals(ctx.response.status, 200);
+        assertExists(responseData.data?.tags);
+        assert(Array.isArray(responseData.data.tags));
+        assertExists(responseData.data.tagCount);
+        assert(responseData.data.tags.includes("tag1"));
+        assert(responseData.data.tags.includes("tag2"));
+        assert(responseData.data.tags.includes("tag3"));
+      },
+    );
+
+    await t.step("should return todo stats for valid user", async () => {
+      // Create todos with various properties
+      await todoService.createTodo(
+        testUser.userId,
+        "Stats Todo 1",
+        "Pending, high priority.",
+        ["stats"],
+        "high",
+      );
+      await todoService.createTodo(
+        testUser.userId,
+        "Stats Todo 2",
+        "Completed, low priority.",
+        ["stats"],
+        "low",
+      );
+      // Mark one as complete
+      const todos = await todoService.fetchTodos(testUser.userId, {});
+      if (todos.length > 0) {
+        todos[0].isComplete = true;
+        await todoService.updateTodo(
+          testUser.userId,
+          todos[0].todoId,
+          todos[0],
+        );
+      }
+
+      const ctx = createMockRouterContext<
+        "/api/:userId/todos/stats"
+      >(
+        `http://localhost/api/${testUser.userId}/todos/stats`,
+        { user: { userId: testUser.userId } },
+        "GET",
+        {},
+        { userId: testUser.userId },
+      );
+
+      await todoStats(ctx);
+
+      const responseData = ctx.response.body as ResponseData;
+      assertEquals(ctx.response.status, 200);
+      assertExists(responseData.data);
+      assert(typeof responseData.data.total === "number");
+      assert(typeof responseData.data.completed === "number");
+      assert(typeof responseData.data.pending === "number");
+      assert(typeof responseData.data.highPriority === "number");
+      assert(typeof responseData.data.lowPriority === "number");
+    });
+
+    await t.step(
+      "should toggle completion status for a valid todo",
+      async () => {
+        // Create a todo to toggle
+        const todoToToggle = await todoService.createTodo(
+          testUser.userId,
+          "Toggle Todo",
+          "Toggle completion status.",
+          ["toggle"],
+          "medium",
+        );
+
+        // Ensure initial state is incomplete
+        assertEquals(todoToToggle.isComplete, false);
+
+        const ctx = createMockRouterContext<
+          "/api/:userId/todo/:todoId/toggle"
+        >(
+          `http://localhost/api/${testUser.userId}/todo/${todoToToggle.todoId}/toggle`,
+          { user: { userId: testUser.userId } },
+          "POST",
+          {},
+          { userId: testUser.userId, todoId: todoToToggle.todoId },
+        );
+
+        await toggleComplete(ctx);
+
+        const responseData = ctx.response.body as ResponseData;
+        assertEquals(ctx.response.status, 200);
+        assertExists(responseData.data);
+        assertEquals(responseData.data.isComplete, true);
+
+        // Toggle again to revert
+        await toggleComplete(ctx);
+        const responseData2 = ctx.response.body as ResponseData;
+        assertEquals(responseData2.data.isComplete, false);
       },
     );
 
