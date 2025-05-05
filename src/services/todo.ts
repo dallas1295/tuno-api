@@ -424,4 +424,15 @@ export class TodoService {
       throw error;
     }
   }
+  async getTodo(userId: string, todoId: string): Promise<Todo> {
+    if (!userId || !todoId) throw new Error("user id and todo id are required");
+
+    const todo = await this.todoRepo.getTodoById(todoId);
+
+    if (!todo || todo.userId !== userId) {
+      throw new Error("todo not found");
+    }
+
+    return todo;
+  }
 }
