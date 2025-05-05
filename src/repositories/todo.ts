@@ -100,6 +100,7 @@ export class TodoRepo {
           dueDate: updates.dueDate,
           reminderAt: updates.reminderAt,
           recurrencePattern: updates.recurringPattern,
+          isComplete: updates.isComplete,
         },
       };
       const result = await this.collection.updateOne(filter, update);
