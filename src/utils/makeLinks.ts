@@ -42,10 +42,10 @@ export function makeTodoLink(id: string, action: "self" | "update" | "delete") {
   const base = `/todo/${id}`;
   switch (action) {
     case "self":
-      return { href: base, method: "get" };
+      return { href: base, method: "GET" };
     case "update":
-      return { href: base, method: "put" };
+      return { href: base, method: "PUT" };
     case "delete":
-      return { href: base, method: "delete" };
+      return { href: base, method: "DELETE" };
   }
 }
