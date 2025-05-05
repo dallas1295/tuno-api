@@ -1,8 +1,20 @@
-import { Todo, PriorityLevel, RecurrencePattern } from "../models/todo.ts";
+import { Pattern, Priority, Todo } from "../models/todo.ts";
 
 interface TodoLink {
   href: string;
-  method: string[];
+  method?: string;
+}
+
+export interface CreateTodoReq {
+  todoName: string;
+  description: string;
+  tags?: string[];
+  priority?: keyof typeof Priority;
+  dueDate?: Date;
+  reminderAt?: Date;
+  isRecurring?: boolean;
+  recurringPattern?: keyof typeof Pattern;
+  recurrenceEnd?: Date;
 }
 
 interface TodoResponse {
@@ -10,12 +22,12 @@ interface TodoResponse {
   todoName: string;
   description: string;
   isComplete: boolean;
-  priorityLevel?: PriorityLevel;
+  priority?: keyof typeof Priority;
   tags?: string[];
   dueDate?: Date;
   reminderAt?: Date;
   isRecurring?: boolean;
-  recurrencePattern?: RecurrencePattern;
+  recurringPattern?: keyof typeof Pattern;
   recurrenceEnd?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -37,8 +49,8 @@ export function toTodoResponse(
     links: links,
   };
 
-  if (todo.priorityLevel) {
-    response.priorityLevel = todo.priorityLevel;
+  if (todo.priority) {
+    response.priority = todo.priority;
   }
 
   if (todo.dueDate) {
@@ -51,7 +63,7 @@ export function toTodoResponse(
 
   if (todo.isRecurring) {
     response.isRecurring = todo.isRecurring;
-    response.recurrencePattern = todo.recurrencePattern;
+    response.recurringPattern = todo.recurringPattern;
     if (todo.recurrenceEnd) {
       response.recurrenceEnd = todo.recurrenceEnd;
     }
