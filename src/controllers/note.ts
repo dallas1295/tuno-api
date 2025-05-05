@@ -283,7 +283,7 @@ export async function deleteNote(
         return Response.forbidden(ctx, "User ID does not exist");
       }
 
-      const validNote = await noteService.getNote(userIdFromToken, noteId);
+      const validNote = await noteService.getNote(validUser.userId, noteId);
       if (!validNote) {
         return Response.notFound(ctx, "Note does not exist");
       }
