@@ -2,7 +2,31 @@
 
 _Secure Note-taking API_
 
+Tuno is designed to be a personal project turned potential sass, there are many alternatives but none have the layout or necessary tradeoffs I need for my neurodivergent brain.
+
 ---
+
+## WISHLIST
+
+**E2E**
+
+- this is a feature that i REALLY want to implement for security and practice (need to learn more about cryptography)
+
+**Habit Tracking/Journalling**
+
+- I think it would be great to be able to use this (After E2E is enabled) to have a journalling section so notes don't have to be tagged and removed from sorting this would have auto dating and more of a diary focused feature set
+
+**Secret Folder**
+
+- I would like to implement a secret sction for extra private notes so they don't show in the search function (much like an archive feature)
+
+**Todo & Notes Fuzzy Searching**
+
+- this feature would be down the line, I'd like to learn how to unify the search and sorting features for a simpler front end layout
+
+**Share capabilities**
+
+- this would be a future feature, being able to share the users notes/todos with other tuno accounts would be a great thing for teams and companies.
 
 ## Notes
 
