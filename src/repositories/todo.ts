@@ -170,4 +170,33 @@ export class TodoRepo {
       timer.end();
     }
   }
+
+  async findTodos(
+    userId: string,
+    { tags, sortBy = "createdAt", sortOrder = -1 }: {
+      tags?: string[];
+      sortBy?: string;
+      sortOrder?: 1 | -1;
+    },
+  ): Promise<Todo[]> {
+    const timer = DatabaseMetrics.track("find", "todo");
+    try {
+      const filter: Record<string, unknown> = { userId };
+      if (tags && tags.length > 0) {
+        filter.tags = { $in: tags };
+      }
+      const sort: Record<string, 1 | -1> = {};
+      sort[sortBy] = sortOrder;
+      const todos = await this.collection.find(filter).sort(sort).toArray();
+      return todos;
+    } catch (error) {
+      ErrorCounter.add(1, {
+        type: "database",
+        operation: "find_todos_failed",
+      });
+      throw error;
+    } finally {
+      timer.end();
+    }
+  }
 }
