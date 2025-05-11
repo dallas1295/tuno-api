@@ -20,7 +20,7 @@ export async function changeEmail(
     });
     return Response.unauthorized(
       ctx,
-      "Unauthorized: userId mismatch or missing token",
+      "Missing or invalid Token",
     );
   }
 
