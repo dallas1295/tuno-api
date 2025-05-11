@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 import { changePassword } from "../src/controllers/changePassword.ts";
 import { Response } from "../src/utils/response.ts";
 import { initializeServices, userService } from "../src/config/serviceSetup.ts";
@@ -12,20 +12,35 @@ interface ResponseData {
   error?: string;
 }
 
-const createMockContext = (
+function createMockRouterContext(
   body: unknown,
   state: Record<string, unknown> = {},
-): Context =>
-  ({
+  params: { userId?: string } = {},
+): RouterContext<
+  "/api/:userId/change-password",
+  { userId: string },
+  Record<string, unknown>
+> {
+  return {
     request: {
       body: {
         value: body,
         json: () => Promise.resolve(body),
       },
-    },
+      url: new URL(
+        "http://localhost/api/" + (params.userId ?? "test") +
+          "/change-password",
+      ),
+    } as any,
     response: new Response(),
     state,
-  }) as unknown as Context;
+    params: { userId: params.userId ?? "test" } as { userId: string },
+  } as unknown as RouterContext<
+    "/api/:userId/change-password",
+    { userId: string },
+    Record<string, unknown>
+  >;
+}
 
 Deno.test({
   name: "Change Password Controller Tests",
@@ -49,20 +64,18 @@ Deno.test({
     await t.step("setup: create test user", async () => {
       const createdUser = await userService.createUser(
         "testuser",
-        "test@example.com",
-        "OldPass123!@#",
+        "old@example.com",
+        "Test123!@#$",
       );
       assertExists(createdUser);
       testUser = createdUser;
     });
 
     await t.step("should successfully change password", async () => {
-      const ctx = createMockContext(
-        {
-          oldPassword: "OldPass123!@#",
-          newPassword: "NewPass123!@#",
-        },
+      const ctx = createMockRouterContext(
+        { oldPassword: "Test123!@#$", newPassword: "NewPass123!@#$" },
         { user: { userId: testUser.userId } },
+        { userId: testUser.userId },
       );
 
       await changePassword(ctx);
@@ -73,28 +86,27 @@ Deno.test({
     await t.step(
       "should return unauthorized when no user ID in context",
       async () => {
-        const ctx = createMockContext(
-          {
-            oldPassword: "OldPass123!@#",
-            newPassword: "NewPass123!@#",
-          },
+        const ctx = createMockRouterContext(
+          { oldPassword: "Test123!@#$", newPassword: "NewPass123!@#$" },
           {},
+          { userId: testUser.userId },
         );
 
         await changePassword(ctx);
         const responseData = ctx.response.body as ResponseData;
 
         assertEquals(ctx.response.status, 401);
-        assertEquals(responseData.error, "Missing or invalid token");
+        assertEquals(responseData.error, "Missing or invalid Token");
       },
     );
 
     await t.step(
       "should return bad request when passwords are not provided",
       async () => {
-        const ctx = createMockContext(
+        const ctx = createMockRouterContext(
           { oldPassword: "", newPassword: "" },
           { user: { userId: testUser.userId } },
+          { userId: testUser.userId },
         );
 
         await changePassword(ctx);
@@ -111,12 +123,10 @@ Deno.test({
     await t.step(
       "should return unauthorized when user is not found",
       async () => {
-        const ctx = createMockContext(
-          {
-            oldPassword: "OldPass123!@#",
-            newPassword: "NewPass123!@#",
-          },
+        const ctx = createMockRouterContext(
+          { oldPassword: "Test123!@#$", newPassword: "NewPass123!@#$" },
           { user: { userId: "nonexistent-id" } },
+          { userId: "nonexistent-id" },
         );
 
         await changePassword(ctx);
@@ -133,12 +143,10 @@ Deno.test({
         throw new ChangeRateLimit(14);
       };
 
-      const ctx = createMockContext(
-        {
-          oldPassword: "OldPass123!@#",
-          newPassword: "NewPass123!@#",
-        },
+      const ctx = createMockRouterContext(
+        { oldPassword: "Test123!@#$", newPassword: "NewPass123!@#$" },
         { user: { userId: testUser.userId } },
+        { userId: testUser.userId },
       );
 
       await changePassword(ctx);
@@ -154,8 +162,8 @@ Deno.test({
       if (testUser) {
         await userService.deleteUser(
           testUser.userId,
-          "NewPass123!@#",
-          "NewPass123!@#",
+          "NewPass123!@#$",
+          "NewPass123!@#$",
         );
         await closeDatabaseConnection();
       }

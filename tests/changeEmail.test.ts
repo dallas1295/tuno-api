@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 import { changeEmail } from "../src/controllers/changeEmail.ts";
 import { Response } from "../src/utils/response.ts";
 import { initializeServices, userService } from "../src/config/serviceSetup.ts";
@@ -12,20 +12,34 @@ interface ResponseData {
   error?: string;
 }
 
-const createMockContext = (
+function createMockRouterContext(
   body: unknown,
   state: Record<string, unknown> = {},
-): Context =>
-  ({
+  params: { userId?: string } = {},
+): RouterContext<
+  "/api/:userId/change-email",
+  { userId: string },
+  Record<string, unknown>
+> {
+  return {
     request: {
       body: {
         value: body,
         json: () => Promise.resolve(body),
       },
-    },
+      url: new URL(
+        "http://localhost/api/" + (params.userId ?? "test") + "/change-email",
+      ),
+    } as any,
     response: new Response(),
     state,
-  }) as unknown as Context;
+    params: { userId: params.userId ?? "test" } as { userId: string },
+  } as unknown as RouterContext<
+    "/api/:userId/change-email",
+    { userId: string },
+    Record<string, unknown>
+  >;
+}
 
 Deno.test({
   name: "Change Email Controller Tests",
@@ -57,9 +71,10 @@ Deno.test({
     });
 
     await t.step("should successfully change email", async () => {
-      const ctx = createMockContext(
+      const ctx = createMockRouterContext(
         { newEmail: "new@example.com" },
         { user: { userId: testUser.userId } },
+        { userId: testUser.userId },
       );
 
       await changeEmail(ctx);
@@ -70,9 +85,10 @@ Deno.test({
     await t.step(
       "should return unauthorized when no user ID in context",
       async () => {
-        const ctx = createMockContext(
+        const ctx = createMockRouterContext(
           { newEmail: "new@example.com" },
           {},
+          { userId: testUser.userId },
         );
 
         await changeEmail(ctx);
@@ -86,9 +102,10 @@ Deno.test({
     await t.step(
       "should return bad request when email is not provided",
       async () => {
-        const ctx = createMockContext(
+        const ctx = createMockRouterContext(
           { newEmail: "" },
           { user: { userId: testUser.userId } },
+          { userId: testUser.userId },
         );
 
         await changeEmail(ctx);
@@ -102,9 +119,10 @@ Deno.test({
     await t.step(
       "should return unauthorized when user is not found",
       async () => {
-        const ctx = createMockContext(
+        const ctx = createMockRouterContext(
           { newEmail: "new@example.com" },
           { user: { userId: "nonexistent-id" } },
+          { userId: "nonexistent-id" },
         );
 
         await changeEmail(ctx);
@@ -121,9 +139,10 @@ Deno.test({
         throw new ChangeRateLimit(14);
       };
 
-      const ctx = createMockContext(
+      const ctx = createMockRouterContext(
         { newEmail: "new@example.com" },
         { user: { userId: testUser.userId } },
+        { userId: testUser.userId },
       );
 
       await changeEmail(ctx);

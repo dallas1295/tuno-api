@@ -33,7 +33,7 @@ interface ResponseData {
 
 // Generic mock for RouterContext with route type
 function createMockRouterContext<
-  T extends string = "/note/:id",
+  T extends string = "/api/:userId/note/:id",
 >(
   url: string,
   state: Record<string, unknown> = {},
@@ -42,7 +42,6 @@ function createMockRouterContext<
   params: Record<string, string> = {},
 ): RouterContext<T> {
   const urlObj = new URL(url, "http://localhost");
-  // @ts-ignore - we only mock what we use
   return {
     request: {
       url: urlObj,
@@ -65,13 +64,11 @@ function createMockRouterContext<
     },
     state,
     params,
-    // The following are required by RouterContext but not used in our tests/controllers
     app: undefined as any,
     cookies: undefined as any,
     send: undefined as any,
     throw: undefined as any,
     assert: undefined as any,
-    // ...add more as needed if your controller accesses them
   } as unknown as RouterContext<T>;
 }
 
@@ -120,7 +117,9 @@ Deno.test({
     await t.step(
       "should return unauthorized when no user in state",
       async () => {
-        const ctx = createMockRouterContext("http://localhost/note?q=test");
+        const ctx = createMockRouterContext<"/api/:userId/notes">(
+          `http://localhost/api/${testUser.userId}/notes?q=test`,
+        );
         await searchNotes(ctx);
         const responseData = ctx.response.body as ResponseData;
         assertEquals(ctx.response.status, 401);
@@ -129,10 +128,12 @@ Deno.test({
     );
 
     await t.step("should return notes for valid user", async () => {
-      const ctx = createMockRouterContext(
-        "http://localhost/note?q=Test",
+      const ctx = createMockRouterContext<"/api/:userId/notes">(
+        `http://localhost/api/${testUser.userId}/notes?q=Test`,
         { user: { userId: testUser.userId } },
         "GET",
+        {},
+        { userId: testUser.userId },
       );
       await searchNotes(ctx);
       const responseData = ctx.response.body as ResponseData;
@@ -142,8 +143,8 @@ Deno.test({
     });
 
     await t.step("should create a note for valid user", async () => {
-      const ctx = createMockRouterContext(
-        "http://localhost/note",
+      const ctx = createMockRouterContext<"/api/:userId/notes/create">(
+        `http://localhost/api/${testUser.userId}/notes/create`,
         { user: { userId: testUser.userId } },
         "POST",
         {
@@ -152,6 +153,7 @@ Deno.test({
           tags: ["created"],
           isPinned: false,
         },
+        { userId: testUser.userId },
       );
       await newNote(ctx);
 
@@ -166,8 +168,8 @@ Deno.test({
     await t.step(
       "should return unauthorized when creating note with no user",
       async () => {
-        const ctx = createMockRouterContext(
-          "http://localhost/note",
+        const ctx = createMockRouterContext<"/api/:userId/notes/create">(
+          `http://localhost/api/${testUser.userId}/notes/create`,
           {},
           "POST",
           {
@@ -176,6 +178,7 @@ Deno.test({
             tags: ["fail"],
             isPinned: false,
           },
+          { userId: testUser.userId },
         );
         await newNote(ctx);
 
@@ -202,12 +205,12 @@ Deno.test({
         isPinned: true,
       };
 
-      const ctx = createMockRouterContext(
-        `http://localhost/note/${originalNote.noteId}`,
+      const ctx = createMockRouterContext<"/api/:userId/note/:id/update">(
+        `http://localhost/api/${testUser.userId}/note/${originalNote.noteId}/update`,
         { user: { userId: testUser.userId } },
         "PUT",
         updatedFields,
-        { id: originalNote.noteId },
+        { userId: testUser.userId, id: originalNote.noteId },
       );
 
       await updateNote(ctx);
@@ -231,12 +234,12 @@ Deno.test({
           isPinned: false,
         };
 
-        const ctx = createMockRouterContext(
-          "http://localhost/note/",
+        const ctx = createMockRouterContext<"/api/:userId/note/:id/update">(
+          `http://localhost/api/${testUser.userId}/note//update`,
           { user: { userId: testUser.userId } },
           "PUT",
           updatedFields,
-          {}, // no id param
+          { userId: testUser.userId }, // no id param
         );
 
         await updateNote(ctx);
@@ -266,12 +269,12 @@ Deno.test({
           isPinned: false,
         };
 
-        const ctx = createMockRouterContext(
-          `http://localhost/note/${originalNote.noteId}`,
+        const ctx = createMockRouterContext<"/api/:userId/note/:id/update">(
+          `http://localhost/api/${testUser.userId}/note/${originalNote.noteId}/update`,
           {},
           "PUT",
           updatedFields,
-          { id: originalNote.noteId },
+          { userId: testUser.userId, id: originalNote.noteId },
         );
 
         await updateNote(ctx);
@@ -293,12 +296,12 @@ Deno.test({
         false,
       );
 
-      const ctx = createMockRouterContext(
-        `http://localhost/notes/${noteToDelete.noteId}`,
+      const ctx = createMockRouterContext<"/api/:userId/note/:id/delete">(
+        `http://localhost/api/${testUser.userId}/note/${noteToDelete.noteId}/delete`,
         { user: { userId: testUser.userId } },
         "DELETE",
         {},
-        { id: noteToDelete.noteId },
+        { userId: testUser.userId, id: noteToDelete.noteId },
       );
 
       await deleteNote(ctx);
@@ -310,7 +313,7 @@ Deno.test({
       // Confirm note is actually deleted
       await assertRejects(
         async () =>
-          await await noteService.getNote(
+          await noteService.getNote(
             testUser.userId,
             noteToDelete.noteId,
           ),
@@ -330,12 +333,12 @@ Deno.test({
         false,
       );
 
-      const ctx = createMockRouterContext(
-        `http://localhost/note/${noteToShow.noteId}`,
+      const ctx = createMockRouterContext<"/api/:userId/note/:id">(
+        `http://localhost/api/${testUser.userId}/note/${noteToShow.noteId}`,
         { user: { userId: testUser.userId } },
         "GET",
         {},
-        { id: noteToShow.noteId },
+        { userId: testUser.userId, id: noteToShow.noteId },
       );
 
       await showSingleNote(ctx);
@@ -365,10 +368,12 @@ Deno.test({
           false,
         );
 
-        const ctx = createMockRouterContext(
-          "http://localhost/notes/user?page=1&page_size=2&sort_by=createdAt&sort_order=desc",
+        const ctx = createMockRouterContext<"/api/:userId/notes">(
+          `http://localhost/api/${testUser.userId}/notes?page=1&page_size=2&sort_by=createdAt&sort_order=desc`,
           { user: { userId: testUser.userId } },
           "GET",
+          {},
+          { userId: testUser.userId },
         );
         await showAllNotes(ctx);
         const responseData = ctx.response.body as ResponseData;
@@ -391,12 +396,12 @@ Deno.test({
         false,
       );
 
-      const ctx = createMockRouterContext<"/note/:id/pin">(
-        `http://localhost/note/${noteToPin.noteId}/pin`,
+      const ctx = createMockRouterContext<"/api/:userId/note/:id/pin">(
+        `http://localhost/api/${testUser.userId}/note/${noteToPin.noteId}/pin`,
         { user: { userId: testUser.userId } },
         "PUT",
         {},
-        { id: noteToPin.noteId },
+        { userId: testUser.userId, id: noteToPin.noteId },
       );
 
       await pinNote(ctx);
@@ -433,12 +438,12 @@ Deno.test({
       await noteService.togglePin(testUser.userId, note2.noteId);
 
       // Move note2 to position 1
-      const ctx = createMockRouterContext<"/note/:id/pin/position">(
-        `http://localhost/note/${note2.noteId}/pin/position`,
+      const ctx = createMockRouterContext<"/api/:userId/note/:id/pin/position">(
+        `http://localhost/api/${testUser.userId}/note/${note2.noteId}/pin/position`,
         { user: { userId: testUser.userId } },
         "PUT",
         { newPos: 1 },
-        { id: note2.noteId },
+        { userId: testUser.userId, id: note2.noteId },
       );
 
       await updatePinPosition(ctx);
@@ -448,10 +453,12 @@ Deno.test({
     });
 
     await t.step("should return tags with counts for valid user", async () => {
-      const ctx = createMockRouterContext(
-        "http://localhost/notes/tags",
+      const ctx = createMockRouterContext<"/api/:userId/notes/tags">(
+        `http://localhost/api/${testUser.userId}/notes/tags`,
         { user: { userId: testUser.userId } },
         "GET",
+        {},
+        { userId: testUser.userId },
       );
       await showNoteTags(ctx);
       const responseData = ctx.response.body as ResponseData;
@@ -465,10 +472,12 @@ Deno.test({
     });
 
     await t.step("should return note names for valid user", async () => {
-      const ctx = createMockRouterContext(
-        "http://localhost/notes/names",
+      const ctx = createMockRouterContext<"/api/:userId/notes/names">(
+        `http://localhost/api/${testUser.userId}/notes/names`,
         { user: { userId: testUser.userId } },
         "GET",
+        {},
+        { userId: testUser.userId },
       );
       await showNoteNames(ctx);
       const responseData = ctx.response.body as ResponseData;

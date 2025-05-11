@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { Context } from "@oak/oak";
+import { RouterContext } from "@oak/oak";
 import { getProfile } from "../src/controllers/profile.ts";
 import { Response } from "../src/utils/response.ts";
 import { closeDatabaseConnection, connectToDb } from "../src/config/db.ts";
@@ -24,23 +24,30 @@ interface ResponseData {
   error?: string;
 }
 
-const createMockContext = (
-  body: unknown | null = null,
-  headers: Record<string, string> = {},
+function createMockRouterContext(
   state: Record<string, unknown> = {},
-): Context => ({
-  request: {
-    headers: new Headers(headers),
-    body: body
-      ? {
-        value: body,
-        json: () => Promise.resolve(body),
-      }
-      : undefined,
-  },
-  response: new Response(),
-  state,
-} as unknown as Context);
+  params: { userId?: string } = {},
+): RouterContext<
+  "/api/:userId/profile",
+  { userId: string },
+  Record<string, unknown>
+> {
+  return {
+    request: {
+      url: new URL(
+        "http://localhost/api/" + (params.userId ?? "test") + "/profile",
+      ),
+      headers: new Headers(),
+    } as any,
+    response: new Response(),
+    state,
+    params: { userId: params.userId ?? "test" } as { userId: string },
+  } as unknown as RouterContext<
+    "/api/:userId/profile",
+    { userId: string },
+    Record<string, unknown>
+  >;
+}
 
 Deno.test({
   name: "Profile Controller Tests",
@@ -76,40 +83,32 @@ Deno.test({
     await t.step(
       "should return unauthorized when no user in state",
       async () => {
-        const ctx = createMockContext(null, {}, {});
-
+        const ctx = createMockRouterContext({}, { userId: "someid" });
         await getProfile(ctx);
         const responseData = ctx.response.body as ResponseData;
-
         assertEquals(ctx.response.status, 401);
         assertEquals(responseData.error, "Missing or invalid Token");
       },
     );
 
     await t.step("should return unauthorized when user not found", async () => {
-      const ctx = createMockContext(
-        null,
-        {},
+      const ctx = createMockRouterContext(
         { user: { userId: "non-existent-id" } },
+        { userId: "non-existent-id" },
       );
-
       await getProfile(ctx);
       const responseData = ctx.response.body as ResponseData;
-
       assertEquals(ctx.response.status, 401);
       assertEquals(responseData.error, "User not found");
     });
 
     await t.step("should return profile for valid user", async () => {
-      const ctx = createMockContext(
-        null,
-        {},
+      const ctx = createMockRouterContext(
         { user: { userId: testUser.userId } },
+        { userId: testUser.userId },
       );
-
       await getProfile(ctx);
       const responseData = ctx.response.body as ResponseData;
-
       assertEquals(ctx.response.status, 200);
       assertExists(responseData.data?.links);
       assertEquals(

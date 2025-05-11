@@ -2,6 +2,7 @@ import { assert, assertEquals, assertExists, assertRejects } from "@std/assert";
 import {
   deleteTodo,
   newTodo,
+  retrieveTodos,
   todoCount,
   todoStats,
   todoTagList,
@@ -361,7 +362,7 @@ Deno.test({
         "low",
       );
       // Mark one as complete
-      const todos = await todoService.fetchTodos(testUser.userId, {});
+      const todos = await todoService.searchTodos(testUser.userId, {});
       if (todos.length > 0) {
         todos[0].isComplete = true;
         await todoService.updateTodo(
@@ -429,6 +430,139 @@ Deno.test({
         await toggleComplete(ctx);
         const responseData2 = ctx.response.body as ResponseData;
         assertEquals(responseData2.data.isComplete, false);
+      },
+    );
+
+    await t.step(
+      "should retrieve todos for valid user with filters and tags",
+      async () => {
+        // Create some todos for the user
+        await todoService.createTodo(
+          testUser.userId,
+          "Retrieve Todo 1",
+          "First retrieve todo.",
+          ["retrieve", "work"],
+          "low",
+        );
+        await todoService.createTodo(
+          testUser.userId,
+          "Retrieve Todo 2",
+          "Second retrieve todo.",
+          ["retrieve", "personal"],
+          "medium",
+        );
+        // Mark one as complete for filter testing
+        const todos = await todoService.searchTodos(testUser.userId, {});
+        if (todos.length > 0) {
+          todos[0].isComplete = true;
+          await todoService.updateTodo(
+            testUser.userId,
+            todos[0].todoId,
+            todos[0],
+          );
+        }
+
+        // Retrieve all todos (should include completed if filter is set)
+        const ctxAll = createMockRouterContext<
+          "/api/:userId/todos"
+        >(
+          `http://localhost/api/${testUser.userId}/todos?includeCompleted=true`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+        await retrieveTodos(ctxAll);
+        const responseDataAll = ctxAll.response.body as ResponseData;
+        assertEquals(ctxAll.response.status, 200);
+        assertExists(responseDataAll.data);
+        assert(Array.isArray(responseDataAll.data));
+        assert(responseDataAll.data.length >= 2);
+
+        // Retrieve only incomplete todos
+        const ctxIncomplete = createMockRouterContext<
+          "/api/:userId/todos"
+        >(
+          `http://localhost/api/${testUser.userId}/todos?includeCompleted=false`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+        await retrieveTodos(ctxIncomplete);
+        const responseDataIncomplete = ctxIncomplete.response
+          .body as ResponseData;
+        assertEquals(ctxIncomplete.response.status, 200);
+        assertExists(responseDataIncomplete.data);
+        assert(Array.isArray(responseDataIncomplete.data));
+        assert(
+          responseDataIncomplete.data.every((todo: any) => !todo.isComplete),
+        );
+
+        // Retrieve only todos with a due date (none in this case)
+        const ctxDueDate = createMockRouterContext<
+          "/api/:userId/todos"
+        >(
+          `http://localhost/api/${testUser.userId}/todos?onlyWithDueDate=true`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+        await retrieveTodos(ctxDueDate);
+        const responseDataDueDate = ctxDueDate.response.body as ResponseData;
+        assertEquals(ctxDueDate.response.status, 200);
+        assertExists(responseDataDueDate.data);
+        assert(Array.isArray(responseDataDueDate.data));
+        assert(
+          responseDataDueDate.data.every((todo: any) =>
+            todo.dueDate !== undefined && todo.dueDate !== null
+          ),
+        );
+
+        // Retrieve todos by tag "work"
+        const ctxTagWork = createMockRouterContext<
+          "/api/:userId/todos"
+        >(
+          `http://localhost/api/${testUser.userId}/todos?tags=work`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+        await retrieveTodos(ctxTagWork);
+        const responseDataTagWork = ctxTagWork.response.body as ResponseData;
+        assertEquals(ctxTagWork.response.status, 200);
+        assertExists(responseDataTagWork.data);
+        assert(Array.isArray(responseDataTagWork.data));
+        assert(
+          responseDataTagWork.data.every((todo: any) =>
+            todo.tags && todo.tags.includes("work")
+          ),
+        );
+
+        // Retrieve todos by tags "retrieve,personal"
+        const ctxTagsMultiple = createMockRouterContext<
+          "/api/:userId/todos"
+        >(
+          `http://localhost/api/${testUser.userId}/todos?tags=retrieve,personal`,
+          { user: { userId: testUser.userId } },
+          "GET",
+          {},
+          { userId: testUser.userId },
+        );
+        await retrieveTodos(ctxTagsMultiple);
+        const responseDataTagsMultiple = ctxTagsMultiple.response
+          .body as ResponseData;
+        assertEquals(ctxTagsMultiple.response.status, 200);
+        assertExists(responseDataTagsMultiple.data);
+        assert(Array.isArray(responseDataTagsMultiple.data));
+        assert(
+          responseDataTagsMultiple.data.every((todo: any) =>
+            todo.tags &&
+            (todo.tags.includes("retrieve") || todo.tags.includes("personal"))
+          ),
+        );
       },
     );
 
