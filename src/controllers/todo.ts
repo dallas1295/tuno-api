@@ -435,3 +435,73 @@ export async function toggleComplete(
     );
   }
 }
+
+export async function retrieveTodos(
+  ctx: RouterContext<"/api/:userId/todos">,
+) {
+  HTTPMetrics.track("GET", "/api/:userId/todos");
+
+  try {
+    const userIdFromToken = ctx.state.user?.userId;
+    const userIdFromParams = ctx.params.userId;
+
+    if (!userIdFromToken) {
+      ErrorCounter.add(1, {
+        type: "auth",
+        operation: "fetch_todos_unauthorized",
+      });
+      return Response.unauthorized(ctx, "User not found");
+    }
+
+    if (userIdFromToken !== userIdFromParams) {
+      return Response.forbidden(ctx, "You can only access your own todos");
+    }
+
+    const url = ctx.request.url;
+    const includeCompleted =
+      url.searchParams.get("includeCompleted") === "true";
+    const onlyWithDueDate = url.searchParams.get("onlyWithDueDate") === "true";
+    const onlyRecurring = url.searchParams.get("onlyRecurring") === "true";
+    const tagsParam = url.searchParams.get("tags");
+    const tags = tagsParam
+      ? tagsParam.split(",").map((t) => t.trim()).filter(Boolean)
+      : undefined;
+    const sortBy = url.searchParams.get("sortBy") || "createdAt";
+    const sortOrder =
+      (url.searchParams.get("sortOrder") === "asc" ? "asc" : "desc") as
+        | "asc"
+        | "desc";
+
+    try {
+      const validUser = await userService.findById(userIdFromToken);
+      if (!validUser) {
+        return Response.unauthorized(ctx, "You are not logged in");
+      }
+
+      const todos = await todoService.searchTodos(validUser.userId, {
+        includeCompleted,
+        onlyWithDueDate,
+        onlyRecurring,
+        tags,
+        sortBy,
+        sortOrder,
+      });
+
+      return Response.success(ctx, todos);
+    } catch (error) {
+      if (error instanceof Error) {
+        return Response.badRequest(ctx, error.message);
+      }
+      throw error;
+    }
+  } catch (error) {
+    ErrorCounter.add(1, {
+      type: "internal",
+      operation: "fetch_todos",
+    });
+    return Response.internalError(
+      ctx,
+      error instanceof Error ? error.message : "Failed to fetch todos",
+    );
+  }
+}
