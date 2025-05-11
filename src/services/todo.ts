@@ -188,12 +188,15 @@ export class TodoService {
     await this.todoRepo.deleteTodo(userId, todoId);
   }
 
-  async fetchTodos(
+  async searchTodos(
     userId: string,
     options: {
       includeCompleted?: boolean;
       onlyWithDueDate?: boolean;
       onlyRecurring?: boolean;
+      tags?: string[];
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
     },
   ): Promise<Todo[]> {
     try {
@@ -201,15 +204,23 @@ export class TodoService {
         includeCompleted = false,
         onlyWithDueDate = false,
         onlyRecurring = false,
+        tags,
+        sortBy = "createdAt",
+        sortOrder = "desc",
       } = options;
 
-      const userTodos = await this.todoRepo.getUserTodos(userId);
-
-      if (!userTodos) {
-        return [];
+      let todos: Todo[];
+      if (tags && tags.length > 0) {
+        todos = await this.todoRepo.findTodos(userId, {
+          tags,
+          sortBy,
+          sortOrder: sortOrder === "asc" ? 1 : -1,
+        });
+      } else {
+        todos = await this.todoRepo.getUserTodos(userId) || [];
       }
 
-      let filteredTodos = userTodos;
+      let filteredTodos = todos;
 
       if (!includeCompleted) {
         filteredTodos = filteredTodos.filter((todo) => !todo.isComplete);
@@ -251,7 +262,7 @@ export class TodoService {
         }
 
         if (a.dueDate && b.dueDate) {
-          return a.dueDate.getTime() && b.dueDate.getTime();
+          return a.dueDate.getTime() - b.dueDate.getTime();
         } else if (a.dueDate) {
           return -1;
         } else if (b.dueDate) {
