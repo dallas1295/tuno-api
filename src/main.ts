@@ -1,5 +1,6 @@
 import { Application, Router } from "@oak/oak";
 import * as notes from "./controllers/note.ts";
+import * as todos from "./controllers/todo.ts";
 import { changeEmail } from "./controllers/changeEmail.ts";
 import { initializeServices } from "./config/serviceSetup.ts";
 import { corsMiddleware } from "./middleware/cors.ts";
@@ -66,6 +67,15 @@ protectedRouter.put(
 );
 protectedRouter.get("/api/:userId/notes/tags", notes.showNoteTags);
 protectedRouter.get("/api/:userId/notes/names", notes.showNoteNames);
+// Todos
+protectedRouter.get("/api/:userId/todos", todos.retrieveTodos);
+protectedRouter.put("/api/:userId/todos/create", todos.newTodo);
+protectedRouter.put("/api/:userId/todos/:todoId/update", todos.updateTodo);
+protectedRouter.delete("/api/:userId/todo/:id/delete", todos.deleteTodo);
+protectedRouter.get("/api/:userId/todos/count", todos.todoCount);
+protectedRouter.get("/api/:userId/todos/tags", todos.todoTagList);
+protectedRouter.get("/api/:userId/todos/stats", todos.todoStats);
+protectedRouter.post("/api/:userId/todo/:todoId/toggle", todos.toggleComplete);
 
 // App setup
 const app = new Application();
