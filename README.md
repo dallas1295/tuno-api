@@ -6,6 +6,10 @@ Tuno is designed to be a personal project turned potential sass, there are many 
 
 ---
 
+## Before 1.0 Todos
+
+- todo/note creation/update rate limiting
+
 ## WISHLIST
 
 **E2E**
