@@ -4,6 +4,8 @@ _Secure Note-taking API_
 
 Tuno is designed to be a personal project turned potential sass, there are many alternatives but none have the layout or necessary tradeoffs I need for my neurodivergent brain.
 
+- E2E is not here yet but it will be.
+
 ---
 
 ## WISHLIST
