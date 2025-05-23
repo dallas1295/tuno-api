@@ -15,7 +15,7 @@ export async function login(ctx: Context) {
   HTTPMetrics.track("POST", "/login");
 
   try {
-    const loginReq = await ctx.request.body.json() as LoginRequest;
+    const loginReq = (await ctx.request.body.json()) as LoginRequest;
     if (!loginReq || !loginReq.username || !loginReq.password) {
       return Response.badRequest(ctx, "Invalid Input");
     }
@@ -46,8 +46,8 @@ export async function login(ctx: Context) {
       await RateLimiter.resetAttempts(ctx.request.ip, loginReq.username);
 
       if (user.twoFactorEnabled) {
-        const recoveryAvailable = user.recoveryCodes &&
-          user.recoveryCodes.length > 0;
+        const recoveryAvailable =
+          user.recoveryCodes && user.recoveryCodes.length > 0;
 
         const temp = await tokenService.generateTempToken(
           user.userId,
@@ -103,7 +103,8 @@ export async function withTwoFactor(ctx: Context) {
     }
 
     if (
-      typeof body.tempToken !== "string" || typeof body.totpCode !== "string"
+      typeof body.tempToken !== "string" ||
+      typeof body.totpCode !== "string"
     ) {
       return Response.badRequest(ctx, "Invalid input");
     }
