@@ -6,17 +6,10 @@ import { Context, Next } from "@oak/oak";
 
 export async function authMiddleware(ctx: Context, next: Next) {
   try {
-    const authHeader = ctx.request.headers.get("Authorization");
+    const token = await ctx.cookies.get("accessToken");
 
-    if (!authHeader) {
-      Response.unauthorized(ctx, "No authorization header");
-      return;
-    }
-
-    const [bearer, token] = authHeader.split(" ");
-
-    if (bearer !== "Bearer" || !token) {
-      Response.unauthorized(ctx, "Invalid authorization format");
+    if (!token) {
+      Response.unauthorized(ctx, "No access token cookie");
       return;
     }
 
@@ -27,6 +20,7 @@ export async function authMiddleware(ctx: Context, next: Next) {
 
     const payload = await tokenService.verifyToken(token);
     ctx.state.user = payload;
+    ctx.state.accessToken = token;
     return next();
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
