@@ -36,20 +36,21 @@ export async function register(ctx: Context) {
 
     const tokenPair = await tokenService.generateTokenPair(user);
 
-    // Set cookies instead of returning tokens in the body
+    const isProd = Deno.env.get("ENV") === "PROD";
+
     ctx.cookies.set("accessToken", tokenPair.accessToken, {
       httpOnly: true,
-      secure: true, // Should be true (HTTPS)
+      secure: isProd,
       sameSite: "lax",
       path: "/",
     });
 
     ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
       httpOnly: true,
-      secure: true, // Should be true (HTTPS)
+      secure: isProd,
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (longer than access token)
     });
 
     return Response.created(ctx, {

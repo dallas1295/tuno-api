@@ -70,21 +70,24 @@ export async function login(ctx: Context) {
       };
       const userResponse = toUserResponse(user, links);
 
+      const isProd = Deno.env.get("ENV") === "PROD";
+
       ctx.cookies.set("accessToken", tokenPair.accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
       });
 
       ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (longer than access token)
       });
 
+      console.log("Successful Login");
       return Response.success(ctx, {
         user: userResponse,
       });
@@ -100,6 +103,7 @@ export async function login(ctx: Context) {
       type: "internal",
       operation: "login",
     });
+    console.log("Login Failed");
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error logging in",
@@ -171,19 +175,21 @@ export async function withTwoFactor(ctx: Context) {
 
       const userResponse = toUserResponse(user, links);
 
+      const isProd = Deno.env.get("ENV") === "PROD";
+
       ctx.cookies.set("accessToken", tokenPair.accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
       });
 
       ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (longer than access token)
       });
 
       return Response.success(ctx, {
@@ -273,19 +279,21 @@ export async function withRecovery(ctx: Context) {
 
       const userResponse = toUserResponse(user, links);
 
+      const isProd = Deno.env.get("ENV") === "PROD";
+
       ctx.cookies.set("accessToken", tokenPair.accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
       });
 
       ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProd,
         sameSite: "lax",
         path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (longer than access token)
       });
 
       return Response.success(ctx, {
