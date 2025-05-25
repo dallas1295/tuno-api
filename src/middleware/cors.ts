@@ -1,8 +1,11 @@
 import { Context, Next } from "@oak/oak";
+import "@std/dotenv/load";
 
 export async function corsMiddleware(ctx: Context, next: Next) {
   try {
-    ctx.response.headers.set("Access-Control-Allow-Origin", "*");
+    const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN"); //Frontend URL
+
+    ctx.response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
     ctx.response.headers.set(
       "Access-Control-Allow-Methods",
       "GET, POST, PUT, DELETE, OPTIONS",
@@ -11,9 +14,7 @@ export async function corsMiddleware(ctx: Context, next: Next) {
       "Access-Control-Allow-Headers",
       "Origin, X-Requested-With, Content-Type, Accept, Authorization",
     );
-
     ctx.response.headers.set("Access-Control-Max-Age", "3600");
-
     ctx.response.headers.set("Access-Control-Allow-Credentials", "true");
 
     if (ctx.request.method === "OPTIONS") {
