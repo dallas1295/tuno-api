@@ -7,28 +7,35 @@ export async function logout(ctx: Context) {
   HTTPMetrics.track("POST", "/logout");
 
   try {
-    const authHeader = ctx.request.headers.get("Authorization");
+    const accessToken = await ctx.cookies.get("accessToken");
+    const refreshToken = await ctx.cookies.get("refreshToken");
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!accessToken && !refreshToken) {
       ErrorCounter.add(1, {
         type: "auth",
-        operation: "logout_unauthorized",
+        operation: "logout_no_tokens_found",
       });
       return Response.unauthorized(ctx, "Invalid authorization token");
     }
-
-    const accessToken = authHeader.substring("Bearer ".length);
-
-    const refreshToken = ctx.request.headers.get("Refresh-Token");
 
     if (!refreshToken) {
       return Response.badRequest(ctx, "Missing refresh token");
     }
 
-    await tokenService.blacklistTokens([
-      { token: accessToken, type: "access" },
-      { token: refreshToken, type: "refresh" },
-    ]);
+    const tokensToBlacklist = [];
+    if (accessToken) {
+      tokensToBlacklist.push({ token: accessToken, type: "access" as const });
+    }
+    if (refreshToken) {
+      tokensToBlacklist.push({ token: refreshToken, type: "refresh" as const });
+    }
+
+    if (tokensToBlacklist.length > 0) {
+      await tokenService.blacklistTokens(tokensToBlacklist);
+    }
+
+    ctx.cookies.delete("accessToken", { path: "/" });
+    ctx.cookies.delete("refreshToken", { path: "/" });
 
     return Response.success(ctx, {
       data: { message: "Successfully logged out" },
@@ -38,7 +45,6 @@ export async function logout(ctx: Context) {
       type: "auth",
       operation: "logout",
     });
-
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error logging out",

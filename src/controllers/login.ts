@@ -63,15 +63,29 @@ export async function login(ctx: Context) {
         });
       }
 
-      const token = await tokenService.generateTokenPair(user);
+      const tokenPair = await tokenService.generateTokenPair(user);
       const links = {
         self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
       };
       const userResponse = toUserResponse(user, links);
 
+      ctx.cookies.set("accessToken", tokenPair.accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+
+      ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (longer than access token)
+      });
+
       return Response.success(ctx, {
-        token,
         user: userResponse,
       });
     } catch (error) {
@@ -149,7 +163,7 @@ export async function withTwoFactor(ctx: Context) {
       // Reset rate limiting on successful 2FA
       await RateLimiter.resetAttempts(ctx.request.ip);
 
-      const token = await tokenService.generateTokenPair(user);
+      const tokenPair = await tokenService.generateTokenPair(user);
       const links = {
         self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
@@ -157,8 +171,22 @@ export async function withTwoFactor(ctx: Context) {
 
       const userResponse = toUserResponse(user, links);
 
+      ctx.cookies.set("accessToken", tokenPair.accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+
+      ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       return Response.success(ctx, {
-        token,
         user: userResponse,
       });
     } catch (error) {
@@ -237,7 +265,7 @@ export async function withRecovery(ctx: Context) {
 
       await RateLimiter.resetAttempts(ctx.request.ip);
 
-      const token = await tokenService.generateTokenPair(user);
+      const tokenPair = await tokenService.generateTokenPair(user);
       const links = {
         self: makeUserLink(user.userId, "self"),
         logout: { href: "/auth/logout", method: "POST" },
@@ -245,8 +273,22 @@ export async function withRecovery(ctx: Context) {
 
       const userResponse = toUserResponse(user, links);
 
+      ctx.cookies.set("accessToken", tokenPair.accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+
+      ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       return Response.success(ctx, {
-        token,
         user: userResponse,
       });
     } catch (error) {

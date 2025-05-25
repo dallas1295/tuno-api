@@ -34,15 +34,27 @@ export async function register(ctx: Context) {
       throw error;
     }
 
-    const tokens = await tokenService.generateTokenPair(user);
+    const tokenPair = await tokenService.generateTokenPair(user);
+
+    // Set cookies instead of returning tokens in the body
+    ctx.cookies.set("accessToken", tokenPair.accessToken, {
+      httpOnly: true,
+      secure: true, // Should be true (HTTPS)
+      sameSite: "lax",
+      path: "/",
+    });
+
+    ctx.cookies.set("refreshToken", tokenPair.refreshToken, {
+      httpOnly: true,
+      secure: true, // Should be true (HTTPS)
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     return Response.created(ctx, {
       message: "User registered successfully",
       user: { username: user.username, email: user.email },
-      token: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
       links: {
         self: { href: "/auth/login", method: "POST" },
       },

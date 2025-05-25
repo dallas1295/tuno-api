@@ -11,7 +11,7 @@ export async function deleteUser(ctx: Context) {
   if (!userId) {
     ErrorCounter.add(1, {
       type: "auth",
-      operation: "change_email_unauthorized",
+      operation: "account_deletion_failed",
     });
 
     return Response.unauthorized(ctx, "Missing or invalid Token");
@@ -52,12 +52,16 @@ export async function deleteUser(ctx: Context) {
       throw error;
     }
 
+    ctx.cookies.delete("accessToken", { path: "/" });
+    ctx.cookies.delete("refreshToken", { path: "/" });
+
     return Response.success(ctx, "User has been permanently deleted");
   } catch (error) {
     ErrorCounter.add(1, {
       type: "internal",
       operation: "delete_user",
     });
+
     return Response.internalError(
       ctx,
       error instanceof Error ? error.message : "Error deleting user",
