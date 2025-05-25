@@ -7,10 +7,6 @@ import { initializeServices, userService } from "../src/config/serviceSetup.ts";
 
 interface ResponseData {
   data?: {
-    token?: {
-      accessToken: string;
-      refreshToken: string;
-    };
     user?: {
       username: string;
       email: string;
@@ -25,25 +21,34 @@ interface ResponseData {
 
 const createMockContext = (
   body: unknown | null = null,
-  headers: Record<string, string> = {},
+  cookies: Record<string, string> = {},
   state: Record<string, unknown> = {},
-): Context => ({
-  request: {
-    headers: new Headers(headers),
-    body: body
-      ? {
-        value: body,
-        json: () => Promise.resolve(body),
-      }
-      : undefined,
-  },
-  response: {
-    status: 200,
-    body: undefined,
-    headers: new Headers(),
-  },
-  state,
-} as unknown as Context);
+): Context =>
+  ({
+    request: {
+      body: body
+        ? {
+            value: body,
+            json: () => Promise.resolve(body),
+          }
+        : undefined,
+    },
+    response: {
+      status: 200,
+      body: undefined,
+      headers: new Headers(),
+    },
+    state,
+    cookies: {
+      get: (name: string) => cookies[name],
+      set: (name: string, value: string) => {
+        cookies[name] = value;
+      },
+      delete: (name: string) => {
+        delete cookies[name];
+      },
+    },
+  }) as unknown as Context;
 
 Deno.test({
   name: "Registration Controller Tests",
@@ -75,11 +80,15 @@ Deno.test({
     });
 
     await t.step("should successfully register a new user", async () => {
-      const ctx = createMockContext({
-        username: "newuser",
-        email: "newuser@example.com",
-        password: "Test123!@#$",
-      });
+      const cookies: Record<string, string> = {};
+      const ctx = createMockContext(
+        {
+          username: "newuser",
+          email: "newuser@example.com",
+          password: "Test123!@#$",
+        },
+        cookies,
+      );
 
       await register(ctx);
       const responseData = ctx.response.body as ResponseData;
@@ -87,7 +96,8 @@ Deno.test({
       assertEquals(ctx.response.status, 201);
       assertExists(responseData.data?.message, "User registered successfully");
       assertExists(responseData.data?.user);
-      assertExists(responseData.data?.token);
+      assertExists(cookies["accessToken"]);
+      assertExists(cookies["refreshToken"]);
       assertEquals(responseData.data?.user?.username, "newuser");
       assertEquals(responseData.data?.user?.email, "newuser@example.com");
     });
@@ -137,7 +147,6 @@ Deno.test({
     });
 
     await t.step("should return 400 for existing username", async () => {
-      // Try to create another user with same username
       const ctx = createMockContext({
         username: "testuser",
         email: "another@example.com",
@@ -152,7 +161,6 @@ Deno.test({
     });
 
     await t.step("should return 400 for existing email", async () => {
-      // Try to create another user with same email
       const ctx = createMockContext({
         username: "anotheruser",
         email: "test@example.com",

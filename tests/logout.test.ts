@@ -24,20 +24,29 @@ interface ResponseData {
 
 const createMockContext = (
   body: unknown | null = null,
-  headers: Record<string, string> = {},
-): Context => ({
-  request: {
-    headers: new Headers(headers),
-    body: body
-      ? {
-        value: body,
-        json: () => Promise.resolve(body),
-      }
-      : undefined,
-  },
-  response: new Response(),
-  state: {},
-} as unknown as Context);
+  cookies: Record<string, string> = {},
+): Context =>
+  ({
+    request: {
+      body: body
+        ? {
+            value: body,
+            json: () => Promise.resolve(body),
+          }
+        : undefined,
+    },
+    response: new Response(),
+    state: {},
+    cookies: {
+      get: (name: string) => cookies[name],
+      set: (name: string, value: string) => {
+        cookies[name] = value;
+      },
+      delete: (name: string) => {
+        delete cookies[name];
+      },
+    },
+  }) as unknown as Context;
 
 Deno.test({
   name: "Logout Controller Tests",
@@ -48,7 +57,6 @@ Deno.test({
     await initializeServices();
     let testUser: User;
 
-    // Setup: Initialize MongoDB connection
     await t.step("setup: initialize mongodb", async () => {
       try {
         const client = await connectToDb();
@@ -59,7 +67,6 @@ Deno.test({
       }
     });
 
-    // Setup: Create a test user
     await t.step("setup: create test user", async () => {
       const createdUser = await userService.createUser(
         "testuser",
@@ -71,25 +78,21 @@ Deno.test({
     });
 
     await t.step("should successfully logout with valid tokens", async () => {
-      // First get valid tokens by logging in
+      const loginCookies: Record<string, string> = {};
       const loginCtx = createMockContext(
         {
           username: "testuser",
           password: "Test123!@#$",
         },
-        { "Content-Type": "application/json" },
+        loginCookies,
       );
 
       await login(loginCtx);
-      const loginData = loginCtx.response.body as ResponseData;
 
-      const ctx = createMockContext(
-        null,
-        {
-          "Authorization": `Bearer ${loginData.data?.token?.accessToken}`,
-          "Refresh-Token": loginData.data?.token?.refreshToken,
-        } as Record<string, string>,
-      );
+      const ctx = createMockContext(null, {
+        accessToken: loginCookies["accessToken"],
+        refreshToken: loginCookies["refreshToken"],
+      });
 
       await logout(ctx);
 
@@ -97,13 +100,9 @@ Deno.test({
     });
 
     await t.step(
-      "should return unauthorized when Authorization header is missing",
+      "should return unauthorized when no tokens are present",
       async () => {
-        const ctx = createMockContext(
-          null,
-          { "Refresh-Token": "some-token" },
-        );
-
+        const ctx = createMockContext(null, {});
         await logout(ctx);
         const responseData = ctx.response.body as ResponseData;
 
@@ -115,11 +114,7 @@ Deno.test({
     await t.step(
       "should return bad request when refresh token is missing",
       async () => {
-        const ctx = createMockContext(
-          null,
-          { "Authorization": "Bearer some-token" },
-        );
-
+        const ctx = createMockContext(null, { accessToken: "some-token" });
         await logout(ctx);
         const responseData = ctx.response.body as ResponseData;
 
@@ -135,13 +130,10 @@ Deno.test({
         tokenService.blacklistTokens = () =>
           Promise.reject(new Error("Database error"));
 
-        const ctx = createMockContext(
-          null,
-          {
-            "Authorization": "Bearer some-token",
-            "Refresh-Token": "refresh-token",
-          },
-        );
+        const ctx = createMockContext(null, {
+          accessToken: "some-token",
+          refreshToken: "refresh-token",
+        });
 
         await logout(ctx);
         const responseData = ctx.response.body as ResponseData;
@@ -153,7 +145,6 @@ Deno.test({
       }
     });
 
-    // Cleanup
     await t.step("cleanup: delete test user and close connection", async () => {
       if (testUser) {
         await userService.deleteUser(

@@ -14,22 +14,29 @@ interface ResponseData {
 const createMockContext = (
   body: unknown | null = null,
   state: Record<string, unknown> = {},
-): Context => ({
-  request: {
-    body: body
-      ? {
-        value: body,
-        json: () => Promise.resolve(body),
-      }
-      : undefined,
-  },
-  response: {
-    status: 200,
-    body: undefined,
-    headers: new Headers(),
-  },
-  state,
-} as unknown as Context);
+  cookies: Record<string, string> = {},
+): Context =>
+  ({
+    request: {
+      body: body
+        ? {
+            value: body,
+            json: () => Promise.resolve(body),
+          }
+        : undefined,
+    },
+    response: {
+      status: 200,
+      body: undefined,
+      headers: new Headers(),
+    },
+    state,
+    cookies: {
+      get: (name: string) => cookies[name],
+      set: () => {},
+      delete: () => {},
+    },
+  }) as unknown as Context;
 
 Deno.test({
   name: "Delete Account Controller Tests",
@@ -68,14 +75,12 @@ Deno.test({
     });
 
     await t.step("verify tokens are valid before deletion", async () => {
-      const accessTokenValid = await tokenService.verifyToken(
-        userTokens.accessToken,
-      )
+      const accessTokenValid = await tokenService
+        .verifyToken(userTokens.accessToken)
         .then(() => true)
         .catch(() => false);
-      const refreshTokenValid = await tokenService.verifyToken(
-        userTokens.refreshToken,
-      )
+      const refreshTokenValid = await tokenService
+        .verifyToken(userTokens.refreshToken)
         .then(() => true)
         .catch(() => false);
 
