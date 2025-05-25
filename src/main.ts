@@ -40,10 +40,7 @@ protectedRouter.get("/api/:userId/profile", getProfile);
 protectedRouter.post("/api/logout", logout);
 
 // Changes
-protectedRouter.put(
-  "/api/:userId/change-email",
-  changeEmail,
-);
+protectedRouter.put("/api/:userId/change-email", changeEmail);
 protectedRouter.put("/api/:userId/change-password", changePassword);
 
 // 2FA
@@ -54,12 +51,38 @@ protectedRouter.post("/api/:userId/2fa/disable", disableTwoFactor);
 protectedRouter.get("/api/:userId/notes/search", notes.searchNotes);
 protectedRouter.put("/api/:userId/notes/create", notes.newNote);
 protectedRouter.put("/api/:userId/note/:id/update", notes.updateNote);
-protectedRouter.delete(
-  "/api/:userId/note/:id/delete",
-  notes.deleteNote,
-);
+protectedRouter.delete("/api/:userId/note/:id/delete", notes.deleteNote);
 protectedRouter.get("/api/:userId/note/:id", notes.showSingleNote);
 protectedRouter.get("/api/:userId/notes", notes.showAllNotes);
+import { Context, Next } from "@oak/oak";
+
+export async function corsMiddleware(ctx: Context, next: Next) {
+  try {
+    ctx.response.headers.set("Access-Control-Allow-Origin", "*");
+    ctx.response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    ctx.response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+    );
+
+    ctx.response.headers.set("Access-Control-Max-Age", "3600");
+
+    ctx.response.headers.set("Access-Control-Allow-Credentials", "true");
+
+    if (ctx.request.method === "OPTIONS") {
+      ctx.response.status = 204;
+      return;
+    }
+
+    await next();
+  } catch (error) {
+    console.error("CORS error:", error);
+    throw error;
+  }
+}
 protectedRouter.put("/api/:userId/note/:id/pin", notes.pinNote);
 protectedRouter.put(
   "/api/:userId/note/:id/pin/position",
